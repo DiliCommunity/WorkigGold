@@ -5,6 +5,7 @@ import Link from "next/link";
 import Script from "next/script";
 import { X, ExternalLink, ChevronRight, Activity, ArrowLeft } from "lucide-react";
 import { MINI_APP_AGENTS, GATHER_AGENT_IDS, type MiniAppAgent } from "@/lib/agents/mini-app-agents";
+import { matchesProgrammerStack, STACK_DISPLAY } from "@/lib/filters/skills";
 
 interface Order {
   id: string;
@@ -58,9 +59,12 @@ export default function MiniAppPage() {
   const [logsLoading, setLogsLoading] = useState(false);
 
   const platformFilter = selectedAgent?.platformFilter ?? null;
-  const filteredOrders = platformFilter
+  const byPlatform = platformFilter
     ? orders.filter((o) => o.platform === platformFilter)
     : orders;
+  const filteredOrders = byPlatform.filter((o) =>
+    matchesProgrammerStack(o.title, o.description || "")
+  );
 
   const fetchOrders = async () => {
     try {
@@ -261,6 +265,37 @@ export default function MiniAppPage() {
                   ))
                 )}
               </div>
+              <div className="mt-3 p-3 rounded-lg bg-white/5 border border-white/10">
+                <div className="text-xs text-gray-500 mb-1">Фильтр по стеку:</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {STACK_DISPLAY.map((s) => (
+                    <span
+                      key={s}
+                      className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-300/90 text-xs"
+                    >
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
+
+          {!selectedAgent && (
+            <section className="mb-6">
+              <div className="p-3 rounded-xl bg-white/5 border border-white/10">
+                <div className="text-xs text-gray-500 mb-1">Стек (показываются только релевантные):</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {STACK_DISPLAY.map((s) => (
+                    <span
+                      key={s}
+                      className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-300/90 text-xs"
+                    >
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              </div>
             </section>
           )}
 
@@ -295,9 +330,11 @@ export default function MiniAppPage() {
               <div className="text-gray-500 text-center py-8">Загрузка...</div>
             ) : filteredOrders.length === 0 ? (
               <div className="text-gray-500 text-center py-8">
-                {platformFilter
-                  ? `Нет заказов с ${platformFilter}. Запустите парсеры.`
-                  : "Нет заказов. Запустите парсеры."}
+                {byPlatform.length === 0
+                  ? platformFilter
+                    ? `Нет заказов с ${platformFilter}. Запустите парсеры.`
+                    : "Нет заказов. Запустите парсеры."
+                  : `По вашему стеку ничего не найдено (из ${byPlatform.length} заказов).`}
               </div>
             ) : (
               <div className="space-y-3">
@@ -313,8 +350,10 @@ export default function MiniAppPage() {
                       <span className="flex-1 min-w-0">{o.title}</span>
                       <ExternalLink className="w-4 h-4 shrink-0 text-amber-500/70" />
                     </div>
-                    <div className="text-xs text-gray-500 mt-1 flex justify-between">
-                      <span>{o.platform}</span>
+                    <div className="text-xs text-gray-500 mt-1 flex justify-between items-center gap-2">
+                      <span className="px-1.5 py-0.5 rounded bg-white/10 text-gray-400">
+                        {o.platform}
+                      </span>
                       {o.budget && (
                         <span>
                           {o.budget} {o.currency}

@@ -3,6 +3,18 @@
  * Настраивается в env FILTER_SKILLS (через запятую) или здесь по умолчанию.
  */
 
+export const STACK_DISPLAY = [
+  "JavaScript",
+  "TypeScript",
+  "React",
+  "Next.js",
+  "Node.js",
+  "Python",
+  "API",
+  "Web",
+  "Telegram-боты",
+];
+
 const DEFAULT_SKILLS = [
   "javascript",
   "typescript",
@@ -49,9 +61,16 @@ const EXCLUDE_KEYWORDS = [
   "рерайтинг",
   "сео текст",
   "реклама в вк",
+  "реклама и маркетинг",
   "таргетолог",
   "smm",
   "архитектор",
+  "авитолог",
+  "автосалон",
+  "поверпоинт",
+  "powerpoint",
+  "презентация",
+  "отдел продаж",
 ];
 
 function getSkillKeywords(): string[] {
