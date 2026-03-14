@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { AgentModal } from "@/components/AgentModal";
 
 type Role = "gather" | "analyze" | "notify" | "coordination";
 
@@ -11,6 +12,7 @@ interface Agent {
   role: Role;
   platform?: string;
   task: string;
+  filterFocus?: string[];
 }
 
 const INITIAL_AGENTS: Agent[] = [
@@ -39,6 +41,8 @@ const ROLE_STYLES: Record<Role, string> = {
 };
 
 export default function AgentsPage() {
+  const [agents, setAgents] = useState<Agent[]>(INITIAL_AGENTS);
+  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [gatherCount, setGatherCount] = useState(4);
   const [analyzeCount, setAnalyzeCount] = useState(2);
   const [chatMessages, setChatMessages] = useState<{ role: "bot" | "user"; text: string }[]>([
@@ -48,9 +52,15 @@ export default function AgentsPage() {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const diagramRef = useRef<HTMLDivElement>(null);
 
-  const gatherers = INITIAL_AGENTS.filter((a) => a.role === "gather");
-  const analyzers = INITIAL_AGENTS.filter((a) => a.role === "analyze");
-  const notifiers = INITIAL_AGENTS.filter((a) => a.role === "notify");
+  const gatherers = agents.filter((a) => a.role === "gather");
+  const analyzers = agents.filter((a) => a.role === "analyze");
+  const notifiers = agents.filter((a) => a.role === "notify");
+
+  const updateAgent = (updated: Agent) => {
+    setAgents((prev) =>
+      prev.map((a) => (a.id === updated.id ? updated : a))
+    );
+  };
 
   const activeGatherers = gatherers.slice(0, Math.min(gatherCount, gatherers.length));
   const activeAnalyzers = analyzers.slice(0, Math.min(analyzeCount, analyzers.length));
@@ -204,10 +214,12 @@ export default function AgentsPage() {
               <div className="h-8" />
               <div className="flex flex-wrap justify-center gap-4">
                 {activeGatherers.map((a) => (
-                  <div
+                  <button
                     key={a.id}
+                    type="button"
+                    onClick={() => setSelectedAgent(a)}
                     className={cn(
-                      "px-4 py-2 rounded-lg border-2 text-sm font-medium",
+                      "px-4 py-2 rounded-lg border-2 text-sm font-medium cursor-pointer transition-all hover:scale-105 hover:shadow-lg hover:shadow-primary/10",
                       ROLE_STYLES.gather
                     )}
                   >
@@ -215,25 +227,29 @@ export default function AgentsPage() {
                     <div className="text-xs opacity-80 mt-0.5">
                       {ROLE_LABELS.gather} • {a.platform}
                     </div>
-                  </div>
+                  </button>
                 ))}
                 {activeAnalyzers.map((a) => (
-                  <div
+                  <button
                     key={a.id}
+                    type="button"
+                    onClick={() => setSelectedAgent(a)}
                     className={cn(
-                      "px-4 py-2 rounded-lg border-2 text-sm font-medium",
+                      "px-4 py-2 rounded-lg border-2 text-sm font-medium cursor-pointer transition-all hover:scale-105 hover:shadow-lg hover:shadow-cyan-500/10",
                       ROLE_STYLES.analyze
                     )}
                   >
                     {a.name}
                     <div className="text-xs opacity-80 mt-0.5">{ROLE_LABELS.analyze}</div>
-                  </div>
+                  </button>
                 ))}
                 {notifiers.map((a) => (
-                  <div
+                  <button
                     key={a.id}
+                    type="button"
+                    onClick={() => setSelectedAgent(a)}
                     className={cn(
-                      "px-4 py-2 rounded-lg border-2 text-sm font-medium",
+                      "px-4 py-2 rounded-lg border-2 text-sm font-medium cursor-pointer transition-all hover:scale-105 hover:shadow-lg hover:shadow-violet-500/10",
                       ROLE_STYLES.notify
                     )}
                   >
@@ -241,7 +257,7 @@ export default function AgentsPage() {
                     <div className="text-xs opacity-80 mt-0.5">
                       {ROLE_LABELS.notify}
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -286,6 +302,14 @@ export default function AgentsPage() {
           </div>
         </div>
       </div>
+
+      {selectedAgent && (
+        <AgentModal
+          agent={selectedAgent}
+          onClose={() => setSelectedAgent(null)}
+          onSave={updateAgent}
+        />
+      )}
 
       <p className="mt-6 text-sm text-foreground/50">
         Standalone HTML (открыть в браузере или по ссылке):{" "}

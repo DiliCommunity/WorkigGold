@@ -61,6 +61,29 @@
     .legend .gather i { background: var(--gather); }
     .legend .analyze i { background: var(--analyze); }
     .legend .notify i { background: var(--notify); }
+    .modal-overlay { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
+    .modal { width: 100%; max-width: 420px; background: #141b26; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
+    .modal-bar { height: 4px; background: linear-gradient(90deg, var(--primary), var(--secondary)); opacity: 0.8; }
+    .modal-content { padding: 24px; position: relative; }
+    .modal-title { font-size: 1.1rem; font-weight: 700; color: var(--fg); margin-bottom: 4px; }
+    .modal-sub { font-size: 0.75rem; color: #64748b; margin-bottom: 20px; }
+    .modal-section { margin-bottom: 20px; }
+    .modal-label { font-size: 0.85rem; font-weight: 500; color: rgba(255,255,255,0.8); margin-bottom: 8px; display: block; }
+    .modal-role-btn { padding: 8px 16px; border-radius: 12px; border: 2px solid; font-size: 0.85rem; cursor: pointer; margin-right: 8px; margin-bottom: 8px; transition: all 0.2s; }
+    .modal-role-btn.active-gather { border-color: var(--gather); background: rgba(16,185,129,0.2); color: #34d399; }
+    .modal-role-btn.active-analyze { border-color: var(--analyze); background: rgba(8,145,178,0.2); color: #22d3ee; }
+    .modal-role-btn.active-notify { border-color: var(--notify); background: rgba(168,85,247,0.2); color: #c084fc; }
+    .modal-role-btn:not(.active-gather):not(.active-analyze):not(.active-notify) { border-color: rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.6); }
+    .modal-task { width: 100%; padding: 12px 16px; border-radius: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--fg); font-size: 14px; resize: vertical; min-height: 60px; }
+    .modal-filter { width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; border: 2px solid; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; text-align: left; background: transparent; color: inherit; font: inherit; }
+    .modal-filter.checked { border-color: var(--primary); background: rgba(212,175,55,0.1); }
+    .modal-filter:not(.checked) { border-color: rgba(255,255,255,0.05); background: rgba(255,255,255,0.02); }
+    .modal-filter-desc { font-size: 0.75rem; opacity: 0.7; }
+    .modal-actions { display: flex; gap: 12px; margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.06); }
+    .modal-btn { flex: 1; padding: 12px 16px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .modal-btn-cancel { background: transparent; border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.8); }
+    .modal-btn-save { background: var(--primary); color: #0a0e14; border: none; }
+    .modal-close { position: absolute; top: 16px; right: 16px; padding: 8px; border: none; background: none; color: rgba(255,255,255,0.5); cursor: pointer; font-size: 20px; }
   </style>
 </head>
 <body>
@@ -140,15 +163,110 @@
     </div>
   </div>
 
+  <div id="agentModal" class="modal-overlay" style="display:none" onclick="closeModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-bar"></div>
+      <div class="modal-content">
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+        <div class="modal-title" id="modalAgentName">Агент</div>
+        <div class="modal-sub" id="modalAgentPlatform"></div>
+        <div class="modal-section">
+          <label class="modal-label">Роль</label>
+          <button class="modal-role-btn" data-role="gather" onclick="setModalRole('gather')">Сбор</button>
+          <button class="modal-role-btn" data-role="analyze" onclick="setModalRole('analyze')">Анализ</button>
+          <button class="modal-role-btn" data-role="notify" onclick="setModalRole('notify')">Уведомления</button>
+        </div>
+        <div class="modal-section">
+          <label class="modal-label">Задача</label>
+          <textarea class="modal-task" id="modalTask" placeholder="Описание задачи..."></textarea>
+        </div>
+        <div class="modal-section">
+          <label class="modal-label">Акцент на фильтры</label>
+          <button type="button" class="modal-filter" data-fid="budget" onclick="toggleFilter('budget')"><span id="cb-budget">□</span> Бюджет <span class="modal-filter-desc">— приоритет по сумме</span></button>
+          <button type="button" class="modal-filter" data-fid="skills" onclick="toggleFilter('skills')"><span id="cb-skills">□</span> Навыки <span class="modal-filter-desc">— фильтр по стеку</span></button>
+          <button type="button" class="modal-filter" data-fid="platform" onclick="toggleFilter('platform')"><span id="cb-platform">□</span> Платформа <span class="modal-filter-desc">— акцент на биржу</span></button>
+          <button type="button" class="modal-filter" data-fid="urgency" onclick="toggleFilter('urgency')"><span id="cb-urgency">□</span> Срочность <span class="modal-filter-desc">— по дедлайну</span></button>
+          <button type="button" class="modal-filter" data-fid="rating" onclick="toggleFilter('rating')"><span id="cb-rating">□</span> Рейтинг <span class="modal-filter-desc">— по отзывам</span></button>
+        </div>
+        <div class="modal-actions">
+          <button class="modal-btn modal-btn-cancel" onclick="closeModal()">Отмена</button>
+          <button class="modal-btn modal-btn-save" onclick="saveModal()">Сохранить</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
-    const agents = {
-      fl: { name: 'Фл-Разведчик', role: 'gather', platform: 'FL.ru' },
-      kwork: { name: 'Кворк-Сборщик', role: 'gather', platform: 'Kwork' },
-      habr: { name: 'Хабр-Дозорный', role: 'gather', platform: 'Habr' },
-      weblancer: { name: 'Веблансер-Сканёр', role: 'gather', platform: 'Weblancer' },
-      filter: { name: 'Просеиватель', role: 'analyze', platform: '' },
-      vestnik: { name: 'Вестник', role: 'notify', platform: 'Telegram' }
+    const agentData = {
+      fl: { name: 'Фл-Разведчик', platform: 'FL.ru', role: 'gather', task: 'Сканирует FL.ru', filters: [] },
+      kwork: { name: 'Кворк-Сборщик', platform: 'Kwork', role: 'gather', task: 'Собирает заказы Kwork', filters: [] },
+      habr: { name: 'Хабр-Дозорный', platform: 'Habr', role: 'gather', task: 'Мониторит Habr', filters: [] },
+      weblancer: { name: 'Веблансер-Сканёр', platform: 'Weblancer', role: 'gather', task: 'Сканирует Weblancer', filters: [] },
+      filter: { name: 'Просеиватель', platform: '', role: 'analyze', task: 'Фильтрация по критериям', filters: [] },
+      scorer: { name: 'Оценщик', platform: '', role: 'analyze', task: 'Оценка релевантности', filters: [] },
+      sorter: { name: 'Сортировщик', platform: '', role: 'analyze', task: 'Сортировка по приоритету', filters: [] },
+      vestnik: { name: 'Вестник', platform: 'Telegram', role: 'notify', task: 'Уведомления в бот', filters: [] }
     };
+    let currentModalAgent = null;
+    let modalFilters = [];
+
+    document.querySelectorAll('#agentRow .node').forEach(function(el) {
+      el.style.cursor = 'pointer';
+      el.addEventListener('click', function() {
+        var id = el.dataset.id;
+        if (agentData[id]) openModal(id);
+      });
+    });
+    function openModal(id) {
+      currentModalAgent = id;
+      var a = agentData[id];
+      document.getElementById('modalAgentName').textContent = a.name;
+      document.getElementById('modalAgentPlatform').textContent = a.platform || '';
+      document.getElementById('modalTask').value = a.task;
+      document.querySelectorAll('.modal-role-btn').forEach(function(btn) {
+        btn.classList.remove('active-gather','active-analyze','active-notify');
+        if (btn.dataset.role === a.role) btn.classList.add('active-' + a.role);
+      });
+      modalFilters = (a.filters || []).slice();
+      ['budget','skills','platform','urgency','rating'].forEach(function(fid) {
+        var el = document.querySelector('.modal-filter[data-fid="'+fid+'"]');
+        var cb = document.getElementById('cb-'+fid);
+        if (modalFilters.indexOf(fid) >= 0) { el.classList.add('checked'); cb.textContent = '☑'; }
+        else { el.classList.remove('checked'); cb.textContent = '□'; }
+      });
+      document.getElementById('agentModal').style.display = 'flex';
+    }
+    function closeModal() { document.getElementById('agentModal').style.display = 'none'; currentModalAgent = null; }
+    function setModalRole(role) {
+      document.querySelectorAll('.modal-role-btn').forEach(function(btn) {
+        btn.classList.remove('active-gather','active-analyze','active-notify');
+        if (btn.dataset.role === role) btn.classList.add('active-' + role);
+      });
+    }
+    function toggleFilter(fid) {
+      var idx = modalFilters.indexOf(fid);
+      if (idx >= 0) modalFilters.splice(idx, 1);
+      else modalFilters.push(fid);
+      var el = document.querySelector('.modal-filter[data-fid="'+fid+'"]');
+      var cb = document.getElementById('cb-'+fid);
+      if (modalFilters.indexOf(fid) >= 0) { el.classList.add('checked'); cb.textContent = '☑'; }
+      else { el.classList.remove('checked'); cb.textContent = '□'; }
+    }
+    function saveModal() {
+      if (!currentModalAgent) return;
+      var a = agentData[currentModalAgent];
+      var roleBtn = document.querySelector('.modal-role-btn.active-gather, .modal-role-btn.active-analyze, .modal-role-btn.active-notify');
+      a.role = roleBtn ? roleBtn.dataset.role : a.role;
+      a.task = document.getElementById('modalTask').value;
+      a.filters = modalFilters.slice();
+      var node = document.querySelector('#agentRow .node[data-id="'+currentModalAgent+'"]');
+      if (node) {
+        node.className = 'node ' + a.role;
+        var tag = node.querySelector('.role-tag');
+        if (tag) tag.textContent = a.role === 'gather' ? 'Сбор • ' + (a.platform||'') : (a.role === 'analyze' ? 'Анализ' : 'Уведомления');
+      }
+      closeModal();
+    }
 
     const gatherSlider = document.getElementById('gatherCount');
     const analyzeSlider = document.getElementById('analyzeCount');
