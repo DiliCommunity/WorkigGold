@@ -111,6 +111,9 @@ model ProjectDeadline {
   clientName  String?
   deadlineAt  DateTime
   notes       String?
+  tasks       String?
+  myRole      String?
+  techStack   String?
   completed   Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

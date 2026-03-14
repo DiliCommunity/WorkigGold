@@ -17,6 +17,9 @@ export async function PATCH(
         }),
         ...(body.deadlineAt && { deadlineAt: new Date(body.deadlineAt) }),
         ...(body.notes !== undefined && { notes: body.notes ? String(body.notes) : null }),
+        ...(body.tasks !== undefined && { tasks: body.tasks ? String(body.tasks) : null }),
+        ...(body.myRole !== undefined && { myRole: body.myRole ? String(body.myRole) : null }),
+        ...(body.techStack !== undefined && { techStack: body.techStack ? String(body.techStack) : null }),
         ...(body.completed !== undefined && { completed: Boolean(body.completed) }),
       },
     });

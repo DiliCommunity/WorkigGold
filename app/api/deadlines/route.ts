@@ -19,7 +19,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { projectName, clientName, deadlineAt, notes } = body;
+    const { projectName, clientName, deadlineAt, notes, tasks, myRole, techStack } = body;
     if (!projectName || !deadlineAt) {
       return NextResponse.json(
         { error: "Нужны: projectName, deadlineAt" },
@@ -32,6 +32,9 @@ export async function POST(request: NextRequest) {
         clientName: clientName ? String(clientName) : null,
         deadlineAt: new Date(deadlineAt),
         notes: notes ? String(notes) : null,
+        tasks: tasks ? String(tasks) : null,
+        myRole: myRole ? String(myRole) : null,
+        techStack: techStack ? String(techStack) : null,
       },
     });
     return NextResponse.json(deadline);
