@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WorkingGold — Дашборд</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <h1>WorkingGold</h1>
+      <p class="subtitle">Админ панель</p>
+      <nav class="nav">
+        <a href="index.html" class="active">Дашборд</a>
+        <a href="orders.html">Заказы</a>
+        <a href="chat.html">Чаты</a>
+        <a href="stats.html">Статистика</a>
+        <a href="tasks.html">Задачи</a>
+        <a href="calendar.html">Календарь</a>
+      </nav>
+      <p style="font-size: 0.75rem; color: rgba(230,232,235,0.4); margin-top: auto;">v0.1.0</p>
+    </aside>
+    <main class="main">
+      <h1 class="page-title">Дашборд</h1>
+      <p class="page-desc">Обзор отфильтрованных заказов и активности</p>
+      <div class="card-grid">
+        <div class="stat-card">
+          <span class="label">Новых заказов <span class="icon-primary">◉</span></span>
+          <div class="value">12</div>
+        </div>
+        <div class="stat-card">
+          <span class="label">Активных чатов <span class="icon-secondary">◉</span></span>
+          <div class="value">5</div>
+        </div>
+        <div class="stat-card">
+          <span class="label">Принято сегодня <span class="icon-green">◉</span></span>
+          <div class="value">3</div>
+        </div>
+      </div>
+      <div class="order-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h3>Последние заказы</h3>
+          <a href="orders.html" style="font-size: 0.875rem; color: var(--primary);">Все заказы →</a>
+        </div>
+        <p style="text-align: center; color: rgba(230,232,235,0.5); padding: 24px;">
+          Загружаются отфильтрованные заказы...<br>
+          <small>Подключи парсер и webhook Telegram для получения данных</small>
+        </p>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

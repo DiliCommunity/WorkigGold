@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #0a0e14;
+  --foreground: #e6e8eb;
+  --primary: #d4af37;
+  --primary-dark: #b8941f;
+  --secondary: #2dd4bf;
+  --accent-green: #10b981;
+  --accent-ocean: #0891b2;
+  --card-bg: #141b26;
+  --card-hover: #1e2938;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  min-height: 100vh;
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-card/80 backdrop-blur-sm border border-white/5;
+  }
+}

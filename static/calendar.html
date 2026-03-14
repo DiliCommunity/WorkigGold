@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WorkingGold — Календарь дедлайнов</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <h1>WorkingGold</h1>
+      <p class="subtitle">Админ панель</p>
+      <nav class="nav">
+        <a href="index.html">Дашборд</a>
+        <a href="orders.html">Заказы</a>
+        <a href="chat.html">Чаты</a>
+        <a href="stats.html">Статистика</a>
+        <a href="tasks.html">Задачи</a>
+        <a href="calendar.html" class="active">Календарь</a>
+      </nav>
+      <p style="font-size: 0.75rem; color: rgba(230,232,235,0.4); margin-top: auto;">v0.1.0</p>
+    </aside>
+    <main class="main">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+        <div>
+          <h1 class="page-title">Календарь дедлайнов</h1>
+          <p class="page-desc">Когда и кому сдавать проект. История в БД (Next.js)</p>
+        </div>
+        <button class="btn-primary" id="btnAddDeadline">+ Добавить дедлайн</button>
+      </div>
+
+      <div id="deadlineForm" class="task-form" style="display: none; margin-bottom: 24px;">
+        <h3>Новый дедлайн</h3>
+        <div class="form-row" style="grid-template-columns: 1fr 1fr;">
+          <div class="form-group">
+            <label>Название проекта *</label>
+            <input type="text" placeholder="Работа над API">
+          </div>
+          <div class="form-group">
+            <label>Кому сдаём (клиент)</label>
+            <input type="text" placeholder="Компания X">
+          </div>
+          <div class="form-group">
+            <label>Дата и время сдачи *</label>
+            <input type="datetime-local" value="2025-03-20T18:00">
+          </div>
+          <div class="form-group">
+            <label>Заметки</label>
+            <input type="text" placeholder="Что именно сдать">
+          </div>
+        </div>
+        <div style="display: flex; gap: 12px; margin-top: 16px;">
+          <button type="button" class="btn-primary">Сохранить</button>
+          <button type="button" class="btn-cancel" id="btnCancelForm">Отмена</button>
+        </div>
+      </div>
+      <script>
+        (function(){
+          var btn = document.getElementById('btnAddDeadline');
+          var form = document.getElementById('deadlineForm');
+          var cancel = document.getElementById('btnCancelForm');
+          btn.onclick = function(){ form.style.display = form.style.display === 'none' ? 'block' : 'none'; };
+          cancel.onclick = function(){ form.style.display = 'none'; };
+        })();
+      </script>
+
+      <section style="margin-bottom: 32px;">
+        <h2 style="font-size: 1rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+          <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--secondary);"></span>
+          Предстоящие
+        </h2>
+        <div class="task-list">
+          <div class="task-item" style="border-color: rgba(45,212,191,0.3);">
+            <div class="task-content">
+              <div class="task-title">API для мобильного приложения</div>
+              <div class="task-meta">
+                <span>Компания X · 15.03 18:00</span>
+                <span>REST endpoints, JWT</span>
+              </div>
+            </div>
+            <div class="task-actions">
+              <button type="button" class="btn-icon btn-done">✓</button>
+              <button type="button" class="btn-icon btn-delete">×</button>
+            </div>
+          </div>
+          <div class="task-item" style="border-color: rgba(45,212,191,0.3);">
+            <div class="task-content">
+              <div class="task-title">Landing для SaaS</div>
+              <div class="task-meta">
+                <span>John Doe · 18.03 12:00</span>
+                <span>Адаптив, формы</span>
+              </div>
+            </div>
+            <div class="task-actions">
+              <button type="button" class="btn-icon btn-done">✓</button>
+              <button type="button" class="btn-icon btn-delete">×</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2 style="font-size: 1rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+          <span style="width: 8px; height: 8px; border-radius: 50%; background: rgba(230,232,235,0.4);"></span>
+          История
+        </h2>
+        <div class="task-list">
+          <div class="task-item done">
+            <div class="task-content">
+              <div class="task-title">Telegram бот на Python</div>
+              <div class="task-meta">
+                <span>Startup Inc · 10.03</span>
+                <span>· Сдано</span>
+              </div>
+            </div>
+            <div class="task-actions">
+              <span style="font-size: 0.8rem; color: rgba(230,232,235,0.5); cursor: pointer;">Вернуть</span>
+              <button type="button" class="btn-icon btn-delete">×</button>
+            </div>
+          </div>
+          <div class="task-item done">
+            <div class="task-content">
+              <div class="task-title">Админ-панель WorkingGold</div>
+              <div class="task-meta">
+                <span>Свой проект · 08.03</span>
+                <span>· Сдано</span>
+              </div>
+            </div>
+            <div class="task-actions">
+              <span style="font-size: 0.8rem; color: rgba(230,232,235,0.5); cursor: pointer;">Вернуть</span>
+              <button type="button" class="btn-icon btn-delete">×</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

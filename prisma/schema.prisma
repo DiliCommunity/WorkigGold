@@ -1,0 +1,135 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FreelanceOrder {
+  id              String   @id @default(cuid())
+  title           String
+  description     String
+  platform        String
+  platformOrderId String?
+  budget          Float?
+  currency        String   @default("USD")
+  clientName      String?
+  clientRating    Float?
+  skills          String[]
+  deadline        DateTime?
+  url             String?
+  status          OrderStatus @default(NEW)
+  filterScore     Float?
+  rawData         Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  messages        Message[]
+  statusHistory   StatusHistory[]
+  
+  @@index([status])
+  @@index([createdAt])
+  @@index([platform])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     FreelanceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  content   String
+  sender    MessageSender
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  
+  @@index([orderId])
+}
+
+model StatusHistory {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     FreelanceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status    OrderStatus
+  reason    String?
+  createdAt DateTime @default(now())
+  
+  @@index([orderId])
+}
+
+model Statistics {
+  id            String   @id @default(cuid())
+  date          DateTime @default(now())
+  acceptedCount Int      @default(0)
+  rejectedCount Int      @default(0)
+  totalOrders   Int      @default(0)
+  avgFilterScore Float?
+  
+  @@index([date])
+}
+
+model AgentLog {
+  id          String   @id @default(cuid())
+  agentType   String
+  action      String
+  status      String
+  details     Json?
+  duration    Int?
+  error       String?
+  createdAt   DateTime @default(now())
+  
+  @@index([agentType])
+  @@index([createdAt])
+}
+
+model Task {
+  id        String    @id @default(cuid())
+  title     String
+  source    String?
+  startAt   DateTime
+  duration  Int
+  done      Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([startAt])
+  @@index([done])
+}
+
+model ProjectDeadline {
+  id          String   @id @default(cuid())
+  projectName String
+  clientName  String?
+  deadlineAt  DateTime
+  notes       String?
+  completed   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([deadlineAt])
+  @@index([completed])
+}
+
+enum OrderStatus {
+  NEW
+  FILTERED
+  APPROVED
+  REJECTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum MessageSender {
+  CLIENT
+  ME
+  SYSTEM
+}

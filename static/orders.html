@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WorkingGold — Заказы</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <h1>WorkingGold</h1>
+      <p class="subtitle">Админ панель</p>
+      <nav class="nav">
+        <a href="index.html">Дашборд</a>
+        <a href="orders.html" class="active">Заказы</a>
+        <a href="chat.html">Чаты</a>
+        <a href="stats.html">Статистика</a>
+        <a href="tasks.html">Задачи</a>
+        <a href="calendar.html">Календарь</a>
+      </nav>
+      <p style="font-size: 0.75rem; color: rgba(230,232,235,0.4); margin-top: auto;">v0.1.0</p>
+    </aside>
+    <main class="main">
+      <h1 class="page-title">Заказы</h1>
+      <p class="page-desc">Отфильтрованные заказы с фриланс бирж</p>
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <article class="order-card">
+          <h3>Разработка Telegram бота на Python <span class="badge badge-filtered">FILTERED</span></h3>
+          <p class="desc">Нужен бот для автоматизации ответов и интеграции с CRM. Требования: aiogram, PostgreSQL.</p>
+          <div class="skills">
+            <span class="skill-tag">Python</span>
+            <span class="skill-tag">Telegram API</span>
+            <span class="skill-tag">PostgreSQL</span>
+          </div>
+          <div class="order-meta">$500 USD · FL.ru · Компания X</div>
+          <p style="font-size: 0.75rem; color: rgba(230,232,235,0.4); margin-top: 8px;">Релевантность: 92%</p>
+        </article>
+        <article class="order-card">
+          <h3>Frontend React + TypeScript <span class="badge badge-new">NEW</span></h3>
+          <p class="desc">Landing page для SaaS продукта. Современный дизайн, адаптивность.</p>
+          <div class="skills">
+            <span class="skill-tag">React</span>
+            <span class="skill-tag">TypeScript</span>
+            <span class="skill-tag">Tailwind</span>
+          </div>
+          <div class="order-meta">$800 USD · Upwork · John Doe</div>
+          <p style="font-size: 0.75rem; color: rgba(230,232,235,0.4); margin-top: 8px;">Релевантность: 88%</p>
+        </article>
+        <article class="order-card">
+          <h3>Backend API на Node.js <span class="badge badge-approved">APPROVED</span></h3>
+          <p class="desc">REST API для мобильного приложения. JWT auth, MongoDB.</p>
+          <div class="skills">
+            <span class="skill-tag">Node.js</span>
+            <span class="skill-tag">MongoDB</span>
+            <span class="skill-tag">Express</span>
+          </div>
+          <div class="order-meta">$1200 USD · Freelancer · Startup Inc</div>
+          <p style="font-size: 0.75rem; color: rgba(230,232,235,0.4); margin-top: 8px;">Релевантность: 95%</p>
+        </article>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

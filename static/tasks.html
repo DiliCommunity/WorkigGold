@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WorkingGold — Мои задачи</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <h1>WorkingGold</h1>
+      <p class="subtitle">Админ панель</p>
+      <nav class="nav">
+        <a href="index.html">Дашборд</a>
+        <a href="orders.html">Заказы</a>
+        <a href="chat.html">Чаты</a>
+        <a href="stats.html">Статистика</a>
+        <a href="tasks.html" class="active">Задачи</a>
+        <a href="calendar.html">Календарь</a>
+      </nav>
+      <p style="font-size: 0.75rem; color: rgba(230,232,235,0.4); margin-top: auto;">v0.1.0</p>
+    </aside>
+    <main class="main">
+      <h1 class="page-title">Мои задачи</h1>
+      <p class="page-desc">Когда смогу сесть и сколько займёт. Данные из БД (Next.js)</p>
+
+      <div class="task-form">
+        <h3>+ Добавить задачу</h3>
+        <form class="form-row">
+          <div class="form-group" style="grid-column: 1 / -1;">
+            <label for="taskTitle">Описание задачи</label>
+            <input type="text" id="taskTitle" placeholder="Доработать авторизацию, добавить JWT">
+          </div>
+          <div class="form-group">
+            <label for="taskStart">Когда смогу сесть</label>
+            <input type="datetime-local" id="taskStart" value="2025-03-13T18:00">
+          </div>
+          <div class="form-group">
+            <label for="taskDuration">Примерное время</label>
+            <select id="taskDuration">
+              <option value="30">30 мин</option>
+              <option value="60" selected>1 ч</option>
+              <option value="90">1.5 ч</option>
+              <option value="120">2 ч</option>
+              <option value="180">3 ч</option>
+              <option value="240">4 ч</option>
+              <option value="360">6 ч</option>
+              <option value="480">8 ч</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="taskSource">Источник</label>
+            <input type="text" id="taskSource" placeholder="Клиент / проект">
+          </div>
+          <div class="form-group" style="align-self: end;">
+            <button type="button" class="btn-primary">Добавить</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="task-list">
+        <div class="task-item">
+          <div class="task-content">
+            <div class="task-title">Доработать авторизацию, добавить JWT</div>
+            <div class="task-meta">
+              <span>📅 13.03 18:00</span>
+              <span>⏱ 2 ч</span>
+              <span>📌 Компания X</span>
+            </div>
+          </div>
+          <div class="task-actions">
+            <button type="button" class="btn-icon btn-done">✓</button>
+            <button type="button" class="btn-icon btn-delete">×</button>
+          </div>
+        </div>
+        <div class="task-item">
+          <div class="task-content">
+            <div class="task-title">Исправить баги в форме заказа</div>
+            <div class="task-meta">
+              <span>📅 13.03 20:00</span>
+              <span>⏱ 1 ч</span>
+              <span>📌 Startup Inc</span>
+            </div>
+          </div>
+          <div class="task-actions">
+            <button type="button" class="btn-icon btn-done">✓</button>
+            <button type="button" class="btn-icon btn-delete">×</button>
+          </div>
+        </div>
+        <div class="task-item done">
+          <div class="task-content">
+            <div class="task-title">Настроить деплой на Vercel</div>
+            <div class="task-meta">
+              <span>📅 12.03 14:00</span>
+              <span>⏱ 30 мин</span>
+              <span>📌 John Doe</span>
+            </div>
+          </div>
+          <div class="task-actions">
+            <button type="button" class="btn-icon btn-done">↩</button>
+            <button type="button" class="btn-icon btn-delete">×</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

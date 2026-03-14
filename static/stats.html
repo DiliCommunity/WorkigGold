@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WorkingGold — Статистика</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <h1>WorkingGold</h1>
+      <p class="subtitle">Админ панель</p>
+      <nav class="nav">
+        <a href="index.html">Дашборд</a>
+        <a href="orders.html">Заказы</a>
+        <a href="chat.html">Чаты</a>
+        <a href="stats.html" class="active">Статистика</a>
+        <a href="tasks.html">Задачи</a>
+        <a href="calendar.html">Календарь</a>
+      </nav>
+      <p style="font-size: 0.75rem; color: rgba(230,232,235,0.4); margin-top: auto;">v0.1.0</p>
+    </aside>
+    <main class="main">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px;">
+        <div>
+          <h1 class="page-title">Статистика</h1>
+          <p class="page-desc">Принятые и отклонённые заказы</p>
+        </div>
+        <button class="btn-primary" onclick="document.getElementById('modal').classList.add('open')">
+          + Добавить результат
+        </button>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="label">Принято <span class="icon-green">↑</span></span>
+          <div class="value" style="color: var(--accent-green);">47</div>
+        </div>
+        <div class="stat-card">
+          <span class="label">Отклонено <span style="color: #f87171;">↓</span></span>
+          <div class="value" style="color: #f87171;">12</div>
+        </div>
+        <div class="stat-card">
+          <span class="label">Всего <span class="icon-primary">◇</span></span>
+          <div class="value" style="color: var(--primary);">59</div>
+        </div>
+      </div>
+      <div class="funnel">
+        <h3 style="margin-bottom: 16px;">Воронка</h3>
+        <div class="funnel-bar">
+          <div class="accepted" style="width: 80%;"></div>
+          <div class="rejected" style="width: 20%;"></div>
+        </div>
+        <div class="funnel-labels">
+          <span style="color: var(--accent-green); margin-right: 24px;">80% принято</span>
+          <span style="color: #f87171;">20% отклонено</span>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-overlay" id="modal" onclick="if(event.target===this) this.classList.remove('open')">
+    <div class="modal">
+      <h3>Добавить результат</h3>
+      <p>Какой итог по этому заказу?</p>
+      <div class="modal-buttons">
+        <button class="btn-accept" onclick="document.getElementById('modal').classList.remove('open')">↑ Принят</button>
+        <button class="btn-reject" onclick="document.getElementById('modal').classList.remove('open')">↓ Отклонён</button>
+      </div>
+      <button class="btn-cancel" onclick="document.getElementById('modal').classList.remove('open')">Отмена</button>
+    </div>
+  </div>
+</body>
+</html>

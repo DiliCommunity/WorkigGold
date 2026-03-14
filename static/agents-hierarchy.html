@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WorkingGold — Иерархия агентов</title>
+  <style>
+    :root {
+      --bg: #0a0e14;
+      --fg: #e6e8eb;
+      --primary: #d4af37;
+      --secondary: #2dd4bf;
+      --card: #141b26;
+      --gather: #10b981;
+      --analyze: #0891b2;
+      --notify: #a855f7;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--fg); margin: 0; min-height: 100vh; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+    h1 { color: var(--primary); margin: 0 0 8px 0; font-size: 1.5rem; }
+    .subtitle { color: #94a3b8; font-size: 0.9rem; margin-bottom: 24px; }
+    .layout { display: grid; grid-template-columns: 1fr 340px; gap: 24px; }
+    @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+    .diagram { background: var(--card); border-radius: 16px; padding: 32px; border: 1px solid rgba(255,255,255,0.06); position: relative; min-height: 500px; }
+    .chat-panel { background: var(--card); border-radius: 16px; border: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; }
+    .chat-header { padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; gap: 12px; }
+    .chat-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), #b8941f); display: flex; align-items: center; justify-content: center; font-weight: bold; }
+    .chat-body { flex: 1; overflow-y: auto; padding: 16px; min-height: 200px; }
+    .chat-msg { margin-bottom: 12px; padding: 10px 14px; border-radius: 12px; max-width: 90%; }
+    .chat-msg.bot { background: rgba(212,175,55,0.15); color: var(--primary); align-self: flex-start; }
+    .chat-msg.user { background: rgba(45,212,191,0.15); color: var(--secondary); margin-left: auto; }
+    .chat-input-wrap { padding: 16px; border-top: 1px solid rgba(255,255,255,0.06); }
+    .chat-input { width: 100%; padding: 12px 16px; border-radius: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--fg); font-size: 14px; }
+    .chat-input::placeholder { color: #64748b; }
+    .controls { background: var(--card); border-radius: 16px; padding: 20px; border: 1px solid rgba(255,255,255,0.06); margin-bottom: 24px; }
+    .controls h3 { margin: 0 0 16px 0; font-size: 0.95rem; color: var(--primary); }
+    .slider-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .slider-row label { min-width: 140px; font-size: 0.85rem; }
+    .slider-row input[type="range"] { flex: 1; }
+    .slider-row span { min-width: 24px; text-align: right; color: var(--primary); }
+    .nodes { display: flex; flex-direction: column; align-items: center; gap: 0; }
+    .row { display: flex; justify-content: center; align-items: center; gap: 24px; position: relative; }
+    .connector { position: absolute; border-left: 2px dashed rgba(212,175,55,0.4); height: 24px; left: 50%; transform: translateX(-50%); }
+    .connector.down { top: 100%; }
+    .connector.up { bottom: 100%; }
+    .node { padding: 12px 20px; border-radius: 12px; border: 2px solid; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; min-width: 140px; text-align: center; }
+    .node:hover { transform: scale(1.03); }
+    .node.prorab { background: linear-gradient(135deg, rgba(212,175,55,0.25), rgba(184,148,31,0.15)); border-color: var(--primary); color: var(--primary); }
+    .node.dispatcher { background: rgba(45,212,191,0.15); border-color: var(--secondary); color: var(--secondary); }
+    .node.gather { background: rgba(16,185,129,0.15); border-color: var(--gather); color: #34d399; }
+    .node.analyze { background: rgba(8,145,178,0.15); border-color: var(--analyze); color: #22d3ee; }
+    .node.notify { background: rgba(168,85,247,0.15); border-color: var(--notify); color: #c084fc; }
+    .node .role-tag { font-size: 0.7rem; opacity: 0.9; font-weight: 500; margin-top: 4px; }
+    .row-agents { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; padding: 16px 0; }
+    .lines-svg { position: absolute; inset: 0; pointer-events: none; width: 100%; height: 100%; }
+    .line { stroke: rgba(212,175,55,0.35); stroke-width: 2; fill: none; }
+    .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 20px; font-size: 0.8rem; color: #94a3b8; }
+    .legend span { display: flex; align-items: center; gap: 6px; }
+    .legend i { width: 10px; height: 10px; border-radius: 2px; }
+    .legend .gather i { background: var(--gather); }
+    .legend .analyze i { background: var(--analyze); }
+    .legend .notify i { background: var(--notify); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Иерархия агентов</h1>
+    <p class="subtitle">Прораб координирует сборщиков и аналитиков. Чат с Прорабом — управление задачами.</p>
+
+    <div class="controls">
+      <h3>Настройка ролей</h3>
+      <div class="slider-row">
+        <label>На сбор информации</label>
+        <input type="range" id="gatherCount" min="1" max="4" value="4">
+        <span id="gatherVal">4</span>
+      </div>
+      <div class="slider-row">
+        <label>На анализ</label>
+        <input type="range" id="analyzeCount" min="0" max="3" value="1">
+        <span id="analyzeVal">1</span>
+      </div>
+      <div class="legend">
+        <span class="gather"><i></i> Сбор</span>
+        <span class="analyze"><i></i> Анализ</span>
+        <span class="notify"><i></i> Уведомления</span>
+      </div>
+    </div>
+
+    <div class="layout">
+      <div class="diagram">
+        <svg class="lines-svg" id="linesSvg">
+          <defs>
+            <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+              <path d="M0,0 L8,4 L0,8" fill="rgba(212,175,55,0.5)"/>
+            </marker>
+          </defs>
+        </svg>
+        <div class="nodes">
+          <div class="row">
+            <div class="node prorab" data-id="prorab">
+              Прораб<br><span class="role-tag">Чат / Координация</span>
+            </div>
+          </div>
+          <div style="height:24px;"></div>
+          <div class="row">
+            <div class="node dispatcher" data-id="dispatcher">
+              Диспетчер<br><span class="role-tag">Оркестрация</span>
+            </div>
+          </div>
+          <div style="height:24px;"></div>
+          <div class="row-agents" id="agentRow">
+            <div class="node gather" data-id="fl" data-role="gather">Фл-Разведчик<br><span class="role-tag">Сбор • FL.ru</span></div>
+            <div class="node gather" data-id="kwork" data-role="gather">Кворк-Сборщик<br><span class="role-tag">Сбор • Kwork</span></div>
+            <div class="node gather" data-id="habr" data-role="gather">Хабр-Дозорный<br><span class="role-tag">Сбор • Habr</span></div>
+            <div class="node gather" data-id="weblancer" data-role="gather">Веблансер-Сканёр<br><span class="role-tag">Сбор • Weblancer</span></div>
+            <div class="node analyze" data-id="filter" data-role="analyze" data-analyze-index="0">Просеиватель<br><span class="role-tag">Фильтрация</span></div>
+            <div class="node analyze" data-id="scorer" data-role="analyze" data-analyze-index="1">Оценщик<br><span class="role-tag">Релевантность</span></div>
+            <div class="node analyze" data-id="sorter" data-role="analyze" data-analyze-index="2">Сортировщик<br><span class="role-tag">Приоритеты</span></div>
+            <div class="node notify" data-id="vestnik" data-role="notify">Вестник<br><span class="role-tag">Уведомления</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-panel">
+        <div class="chat-header">
+          <div class="chat-avatar">П</div>
+          <div>
+            <strong>Прораб</strong><br>
+            <small style="color:#64748b">Координирует агентов</small>
+          </div>
+        </div>
+        <div class="chat-body" id="chatBody">
+          <div class="chat-msg bot">Привет! Я Прораб. Напиши, какую задачу поставить агентам: можно усилить сбор с бирж или анализ заказов.</div>
+        </div>
+        <div class="chat-input-wrap">
+          <input type="text" class="chat-input" id="chatInput" placeholder="Сообщение Прорабу...">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const agents = {
+      fl: { name: 'Фл-Разведчик', role: 'gather', platform: 'FL.ru' },
+      kwork: { name: 'Кворк-Сборщик', role: 'gather', platform: 'Kwork' },
+      habr: { name: 'Хабр-Дозорный', role: 'gather', platform: 'Habr' },
+      weblancer: { name: 'Веблансер-Сканёр', role: 'gather', platform: 'Weblancer' },
+      filter: { name: 'Просеиватель', role: 'analyze', platform: '' },
+      vestnik: { name: 'Вестник', role: 'notify', platform: 'Telegram' }
+    };
+
+    const gatherSlider = document.getElementById('gatherCount');
+    const analyzeSlider = document.getElementById('analyzeCount');
+    const gatherVal = document.getElementById('gatherVal');
+    const analyzeVal = document.getElementById('analyzeVal');
+
+    gatherSlider.addEventListener('input', () => { gatherVal.textContent = gatherSlider.value; updateRoles(); });
+    analyzeSlider.addEventListener('input', () => { analyzeVal.textContent = analyzeSlider.value; updateRoles(); });
+
+    function updateRoles() {
+      const gatherCount = +gatherSlider.value;
+      const analyzeCount = +analyzeSlider.value;
+      const gatherers = ['fl','kwork','habr','weblancer'];
+      const analyzeOrder = ['filter','scorer','sorter'];
+      document.querySelectorAll('#agentRow [data-id]').forEach(el => {
+        const id = el.dataset.id;
+        if (gatherers.includes(id)) {
+          const idx = gatherers.indexOf(id);
+          el.style.display = idx < gatherCount ? 'block' : 'none';
+        } else if (analyzeOrder.includes(id)) {
+          const idx = analyzeOrder.indexOf(id);
+          el.style.display = idx < analyzeCount ? 'block' : 'none';
+        }
+      });
+    }
+    updateRoles();
+
+    document.getElementById('chatInput').addEventListener('keydown', e => {
+      if (e.key !== 'Enter') return;
+      const input = e.target;
+      const text = input.value.trim();
+      if (!text) return;
+      const body = document.getElementById('chatBody');
+      body.innerHTML += `<div class="chat-msg user">${escapeHtml(text)}</div>`;
+      input.value = '';
+      body.innerHTML += `<div class="chat-msg bot">Принято. Передаю агентам.</div>`;
+      body.scrollTop = body.scrollHeight;
+    });
+
+    function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  </script>
+</body>
+</html>
