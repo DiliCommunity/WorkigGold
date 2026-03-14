@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import Script from "next/script";
-import { X, ExternalLink, ChevronRight, Activity } from "lucide-react";
+import { X, ExternalLink, ChevronRight, Activity, ArrowLeft } from "lucide-react";
 import { MINI_APP_AGENTS, GATHER_AGENT_IDS, type MiniAppAgent } from "@/lib/agents/mini-app-agents";
 
 interface Order {
@@ -63,7 +64,7 @@ export default function MiniAppPage() {
 
   const fetchOrders = async () => {
     try {
-      const params = new URLSearchParams({ limit: "50" });
+      const params = new URLSearchParams({ limit: "100" });
       if (platformFilter) params.set("platform", platformFilter);
       const res = await fetch(`/api/orders?${params}`);
       if (res.ok) {
@@ -155,7 +156,12 @@ export default function MiniAppPage() {
       tg.ready();
       tg.expand();
       tg.setHeaderColor("#1a1a2e");
+      tg.BackButton.show();
+      tg.BackButton.onClick(() => window.history.back());
     }
+    return () => {
+      tg?.BackButton?.hide?.();
+    };
   }, []);
 
   return (
@@ -163,6 +169,16 @@ export default function MiniAppPage() {
       <Script src="https://telegram.org/js/telegram-web-app.js" strategy="afterInteractive" />
       <div className="min-h-screen bg-[#1a1a2e] text-white p-4 pb-24">
         <div className="max-w-lg mx-auto">
+          <div className="flex items-center gap-3 mb-4">
+            <Link
+              href="/"
+              className="flex items-center gap-2 text-gray-400 hover:text-amber-400 transition-colors shrink-0"
+              aria-label="Назад"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="text-sm">Назад</span>
+            </Link>
+          </div>
           <h1 className="text-xl font-bold mb-4 text-amber-400">WorkingGold</h1>
           <p className="text-gray-400 text-sm mb-6">
             Управление фриланс-заказами и агентами
@@ -285,7 +301,7 @@ export default function MiniAppPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                {filteredOrders.slice(0, 10).map((o) => (
+                {filteredOrders.map((o) => (
                   <a
                     key={o.id}
                     href={o.url || "#"}

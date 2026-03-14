@@ -1,6 +1,7 @@
 import { AGENTS } from "@/lib/agents/constants";
 import { sendAgentLogToTelegram } from "@/lib/telegram-logger";
 import { prisma } from "@/lib/prisma";
+import { matchesProgrammerStack } from "@/lib/filters/skills";
 import { parseFLru } from "./fl-ru";
 import { parseKwork } from "./kwork";
 import { parseHabr } from "./habr";
@@ -78,8 +79,13 @@ export async function runAllParsers(): Promise<RunAllResult> {
   byPlatform[weblancer.platform] = weblancer.count;
 
   let saved = 0;
+  let filtered = 0;
   const allOrders = [...fl.orders, ...kwork.orders, ...habr.orders, ...weblancer.orders];
   for (const order of allOrders) {
+    if (!matchesProgrammerStack(order.title, order.description)) {
+      filtered++;
+      continue;
+    }
     try {
       const ok = await saveOrder(order);
       if (ok) saved++;
@@ -98,7 +104,7 @@ export async function runAllParsers(): Promise<RunAllResult> {
     status: errors.length > 0 ? "info" : "success",
     count: total,
     durationMs: duration,
-    details: `FL: ${fl.count}, Kwork: ${kwork.count}, Habr: ${habr.count}, Weblancer: ${weblancer.count}. Сохранено: ${saved}`,
+    details: `FL: ${fl.count}, Kwork: ${kwork.count}, Habr: ${habr.count}, Weblancer: ${weblancer.count}. По стеку: ${saved} новых, отфильтровано: ${filtered}`,
     error: errors.length ? errors.slice(0, 3).join("; ") : undefined,
   });
 
