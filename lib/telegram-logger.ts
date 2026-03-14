@@ -1,6 +1,8 @@
 /**
- * Сервис отправки логов агентов в Telegram
+ * Сервис отправки логов агентов в Telegram и сохранения в БД
  */
+
+import { prisma } from "@/lib/prisma";
 
 const TELEGRAM_API = "https://api.telegram.org/bot";
 
@@ -38,6 +40,26 @@ function formatMessage(payload: LogPayload): string {
 }
 
 export async function sendAgentLogToTelegram(payload: LogPayload): Promise<boolean> {
+  // Сохранение в БД для просмотра работы агентов
+  try {
+    await prisma.agentLog.create({
+      data: {
+        agentType: payload.agentId,
+        action: payload.action,
+        status: payload.status,
+        details: {
+          agentName: payload.agentName,
+          count: payload.count,
+          details: payload.details,
+        } as object,
+        duration: payload.durationMs ?? undefined,
+        error: payload.error ?? undefined,
+      },
+    });
+  } catch (e) {
+    console.warn("[AgentLog] Не удалось сохранить лог:", e);
+  }
+
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID || process.env.TELEGRAM_LOG_CHAT_ID;
 

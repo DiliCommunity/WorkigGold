@@ -35,3 +35,7 @@ next-env.d.ts
 
 # prisma
 prisma/migrations
+
+# exclude from repo
+*.md
+*.sql

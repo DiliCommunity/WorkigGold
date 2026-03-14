@@ -1,0 +1,29 @@
+---
+description: Правила проекта WorkingGold
+globs: ["**/*"]
+---
+
+# WorkingGold — правила разработки
+
+## Стек
+- Next.js 14+ (App Router)
+- TypeScript
+- Prisma + PostgreSQL
+- Tailwind CSS
+- Lucide React (иконки)
+
+## Структура
+- `app/` — страницы и API routes
+- `lib/` — парсеры, агенты, утилиты
+- `components/` — переиспользуемые компоненты
+- `prisma/` — схема БД
+
+## Конвенции
+- Использовать `"use client"` только где нужна интерактивность
+- API routes в `app/api/`
+- Агенты: константы в `lib/agents/constants.ts`, конфиг для mini-app в `lib/agents/mini-app-agents.ts`
+- Парсеры: добавлять в `lib/parsers/`, регистрировать в `index.ts`
+- Логи агентов: `sendAgentLogToTelegram` сохраняет в БД и шлёт в Telegram
+
+## Язык интерфейса
+- Русский (ru-RU)
