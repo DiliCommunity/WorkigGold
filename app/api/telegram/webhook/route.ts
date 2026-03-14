@@ -30,23 +30,38 @@ export async function POST(request: NextRequest) {
     const cmd = text.trim().toLowerCase();
 
     if (cmd === "/start" || cmd === "/help") {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://your-app.vercel.app";
+      const channelUrl = process.env.TELEGRAM_CHANNEL_URL || "https://t.me/your_channel";
+
+      const keyboard = {
+        inline_keyboard: [
+          [
+            {
+              text: "📱 Попробовать",
+              web_app: { url: `${appUrl}/mini-app` },
+            },
+          ],
+          [{ text: "📢 Канал", url: channelUrl }],
+        ],
+      };
+
       await sendTelegramMessage(
         String(chatId),
-        `*WorkingGold* — управление фриланс-заказами
+        `*WorkingGold* — умный помощник для фрилансеров
 
-*Агенты:*
-• *Фл-Разведчик* — FL.ru
-• *Кворк-Сборщик* — Kwork
-• *Хабр-Дозорный* — Habr Freelance
-• *Веблансер-Сканёр* — Weblancer
-• *Диспетчер* — координирует парсеры
-• *Вестник* — уведомления
+Автоматически собирает заказы с бирж: FL.ru, Kwork, Habr, Weblancer. Агенты парсят объявления и присылают подходящие в этот чат.
+
+*Возможности:*
+• Парсинг заказов с 4 бирж
+• Фильтрация и отбор по критериям
+• Статистика и управление в мини-приложении
+• Настраиваемые агенты: роли, задачи, фильтры
 
 *Команды:*
 /parse — запустить парсеры
 /status — статистика заказов
-/miniapp — открыть мини-приложение`,
-        { parse_mode: "Markdown" }
+/help — эта справка`,
+        { parse_mode: "Markdown", reply_markup: keyboard }
       );
       return NextResponse.json({ ok: true });
     }
