@@ -4,18 +4,18 @@ import { useState } from "react";
 import { X, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type Role = "gather" | "analyze" | "notify";
+type ModalRole = "gather" | "analyze" | "notify";
 
-interface Agent {
+interface AgentModalAgent {
   id: string;
   name: string;
-  role: Role;
+  role: ModalRole | "coordination";
   platform?: string;
   task: string;
   filterFocus?: string[];
 }
 
-const ROLE_OPTIONS: { value: Role; label: string; color: string }[] = [
+const ROLE_OPTIONS: { value: ModalRole; label: string; color: string }[] = [
   { value: "gather", label: "Сбор информации", color: "bg-emerald-500/20 border-emerald-500/60 text-emerald-400" },
   { value: "analyze", label: "Анализ", color: "bg-cyan-500/20 border-cyan-500/60 text-cyan-400" },
   { value: "notify", label: "Уведомления", color: "bg-violet-500/20 border-violet-500/60 text-violet-400" },
@@ -30,13 +30,13 @@ const FILTER_OPTIONS = [
 ];
 
 interface AgentModalProps {
-  agent: Agent;
+  agent: AgentModalAgent;
   onClose: () => void;
-  onSave: (agent: Agent) => void;
+  onSave: (agent: AgentModalAgent) => void;
 }
 
 export function AgentModal({ agent, onClose, onSave }: AgentModalProps) {
-  const [role, setRole] = useState<Role>(agent.role);
+  const [role, setRole] = useState<ModalRole>(agent.role === "coordination" ? "gather" : agent.role);
   const [task, setTask] = useState(agent.task);
   const [filters, setFilters] = useState<string[]>(agent.filterFocus ?? []);
 
@@ -47,7 +47,7 @@ export function AgentModal({ agent, onClose, onSave }: AgentModalProps) {
   };
 
   const handleSave = () => {
-    onSave({ ...agent, role, task, filterFocus: filters });
+    onSave({ ...agent, role: role as ModalRole, task, filterFocus: filters });
     onClose();
   };
 
