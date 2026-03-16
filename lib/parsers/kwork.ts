@@ -34,55 +34,65 @@ export async function parseKwork(): Promise<ParserResult> {
       details: "Отправка запроса к kwork.ru/projects",
     });
 
-    const res = await fetch(KWORK_URL, {
-      headers: { "User-Agent": USER_AGENT, Accept: "text/html" },
-    });
-
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
-    }
-
-    const html = await res.text();
-    const $ = cheerio.load(html);
     const orders: ParsedOrder[] = [];
     const seen = new Set<string>();
 
-    // Kwork: ссылки на проекты
-    $("a[href*='kwork.ru/projects/'], a[href*='/project/']").each((_, el) => {
-      const $a = $(el);
-      const href = $a.attr("href") || "";
-      const match = href.match(/\/(?:projects?|project)\/(\d+)/i);
-      if (!match) return;
+    for (let page = 1; page <= 3; page++) {
+      const url = page === 1 ? KWORK_URL : `${KWORK_URL}?page=${page}`;
 
-      const id = match[1];
-      if (seen.has(id)) return;
-      seen.add(id);
-
-      const title =
-        $a.find("[class*='title'], [class*='name'], h2, h3").first().text().trim() ||
-        $a.text().trim().split("\n")[0]?.trim().slice(0, 300);
-
-      if (!title || title.length < 5) return;
-
-      const block = $a.closest("[class*='card'], [class*='item'], [class*='project']");
-      const desc =
-        block.find("[class*='desc'], [class*='text']").first().text().trim().slice(0, 500) || title;
-      const budgetText = block.text();
-      const { value: budget, currency } = parseBudget(budgetText);
-
-      const url = href.startsWith("http") ? href : `https://kwork.ru${href}`;
-
-      orders.push({
-        title: title.slice(0, 300),
-        description: desc,
-        platform: "Kwork",
-        platformOrderId: id,
-        budget,
-        currency,
-        url,
-        rawData: {},
+      const res = await fetch(url, {
+        headers: { "User-Agent": USER_AGENT, Accept: "text/html" },
       });
-    });
+
+      if (!res.ok) {
+        // если первая страница упала — считаем ошибкой, остальные тихо пропускаем
+        if (page === 1) {
+          throw new Error(`HTTP ${res.status} on ${url}`);
+        }
+        continue;
+      }
+
+      const html = await res.text();
+      const $ = cheerio.load(html);
+
+      // Kwork: ссылки на проекты
+      $("a[href*='kwork.ru/projects/'], a[href*='/project/']").each((_, el) => {
+        const $a = $(el);
+        const href = $a.attr("href") || "";
+        const match = href.match(/\/(?:projects?|project)\/(\d+)/i);
+        if (!match) return;
+
+        const id = match[1];
+        if (seen.has(id)) return;
+        seen.add(id);
+
+        const title =
+          $a.find("[class*='title'], [class*='name'], h2, h3").first().text().trim() ||
+          $a.text().trim().split("\n")[0]?.trim().slice(0, 300);
+
+        if (!title || title.length < 5) return;
+
+        const block = $a.closest("[class*='card'], [class*='item'], [class*='project']");
+        const desc =
+          block.find("[class*='desc'], [class*='text']").first().text().trim().slice(0, 500) ||
+          title;
+        const budgetText = block.text();
+        const { value: budget, currency } = parseBudget(budgetText);
+
+        const urlFull = href.startsWith("http") ? href : `https://kwork.ru${href}`;
+
+        orders.push({
+          title: title.slice(0, 300),
+          description: desc,
+          platform: "Kwork",
+          platformOrderId: id,
+          budget,
+          currency,
+          url: urlFull,
+          rawData: {},
+        });
+      });
+    }
 
     const duration = Date.now() - start;
     await sendAgentLogToTelegram({
@@ -92,7 +102,7 @@ export async function parseKwork(): Promise<ParserResult> {
       status: "success",
       count: orders.length,
       durationMs: duration,
-      details: `Найдено ${orders.length} объявлений`,
+      details: `Найдено ${orders.length} объявлений (до 3 страниц)`,
     });
 
     return { platform: "Kwork", orders, count: orders.length };

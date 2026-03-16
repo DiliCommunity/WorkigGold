@@ -34,54 +34,63 @@ export async function parseWeblancer(): Promise<ParserResult> {
       details: "Отправка запроса к weblancer.net/jobs",
     });
 
-    const res = await fetch(WEBLANCER_URL, {
-      headers: { "User-Agent": USER_AGENT, Accept: "text/html" },
-    });
-
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
-    }
-
-    const html = await res.text();
-    const $ = cheerio.load(html);
     const orders: ParsedOrder[] = [];
     const seen = new Set<string>();
 
-    $("a[href*='/jobs/']").each((_, el) => {
-      const $a = $(el);
-      const href = $a.attr("href") || "";
-      const match = href.match(/\/jobs\/(\d+)/);
-      if (!match) return;
+    for (let page = 1; page <= 3; page++) {
+      const url = page === 1 ? WEBLANCER_URL : `${WEBLANCER_URL}?page=${page}`;
 
-      const id = match[1];
-      if (seen.has(id)) return;
-      seen.add(id);
-
-      const title =
-        $a.find("[class*='title'], h2, h3").first().text().trim() ||
-        $a.text().trim().split("\n")[0]?.trim().slice(0, 300);
-
-      if (!title || title.length < 5) return;
-
-      const block = $a.closest("[class*='job'], [class*='item']");
-      const desc =
-        block.find("[class*='desc'], [class*='text']").first().text().trim().slice(0, 500) || title;
-      const budgetText = block.text();
-      const { value: budget, currency } = parseBudget(budgetText);
-
-      const url = href.startsWith("http") ? href : `https://www.weblancer.net${href}`;
-
-      orders.push({
-        title: title.slice(0, 300),
-        description: desc,
-        platform: "Weblancer",
-        platformOrderId: id,
-        budget,
-        currency,
-        url,
-        rawData: {},
+      const res = await fetch(url, {
+        headers: { "User-Agent": USER_AGENT, Accept: "text/html" },
       });
-    });
+
+      if (!res.ok) {
+        if (page === 1) {
+          throw new Error(`HTTP ${res.status} on ${url}`);
+        }
+        continue;
+      }
+
+      const html = await res.text();
+      const $ = cheerio.load(html);
+
+      $("a[href*='/jobs/']").each((_, el) => {
+        const $a = $(el);
+        const href = $a.attr("href") || "";
+        const match = href.match(/\/jobs\/(\d+)/);
+        if (!match) return;
+
+        const id = match[1];
+        if (seen.has(id)) return;
+        seen.add(id);
+
+        const title =
+          $a.find("[class*='title'], h2, h3").first().text().trim() ||
+          $a.text().trim().split("\n")[0]?.trim().slice(0, 300);
+
+        if (!title || title.length < 5) return;
+
+        const block = $a.closest("[class*='job'], [class*='item']");
+        const desc =
+          block.find("[class*='desc'], [class*='text']").first().text().trim().slice(0, 500) ||
+          title;
+        const budgetText = block.text();
+        const { value: budget, currency } = parseBudget(budgetText);
+
+        const urlFull = href.startsWith("http") ? href : `https://www.weblancer.net${href}`;
+
+        orders.push({
+          title: title.slice(0, 300),
+          description: desc,
+          platform: "Weblancer",
+          platformOrderId: id,
+          budget,
+          currency,
+          url: urlFull,
+          rawData: {},
+        });
+      });
+    }
 
     const duration = Date.now() - start;
     await sendAgentLogToTelegram({
@@ -91,6 +100,7 @@ export async function parseWeblancer(): Promise<ParserResult> {
       status: "success",
       count: orders.length,
       durationMs: duration,
+      details: `Найдено ${orders.length} объявлений (до 3 страниц)`,
     });
 
     return { platform: "Weblancer", orders, count: orders.length };
