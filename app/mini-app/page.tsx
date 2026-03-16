@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Script from "next/script";
 import { X, ExternalLink, ChevronRight, Activity, ArrowLeft } from "lucide-react";
@@ -35,6 +35,10 @@ interface Stats {
   byPlatform: Record<string, number>;
 }
 
+interface LanguageStats {
+  [language: string]: number;
+}
+
 declare global {
   interface Window {
     Telegram?: {
@@ -54,6 +58,11 @@ export default function MiniAppPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [parseLoading, setParseLoading] = useState(false);
+  const [showParseModal, setShowParseModal] = useState(false);
+  const [parseProgress, setParseProgress] = useState<0 | 25 | 50 | 75 | 100>(0);
+  const [parseLangStats, setParseLangStats] = useState<LanguageStats | null>(null);
+  const [parseTotal, setParseTotal] = useState<number | null>(null);
+  const [parseError, setParseError] = useState<string | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<MiniAppAgent | null>(null);
   const [agentLogs, setAgentLogs] = useState<AgentLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
@@ -65,6 +74,34 @@ export default function MiniAppPage() {
   const filteredOrders = byPlatform.filter((o) =>
     matchesProgrammerStack(o.title, o.description || "")
   );
+
+  const languageStats = useMemo<LanguageStats>(() => {
+    const stats: LanguageStats = {};
+    for (const order of filteredOrders) {
+      const title = `${order.title} ${order.description}`.toLowerCase();
+      const languages: { key: string; label: string }[] = [
+        { key: "javascript", label: "JavaScript" },
+        { key: "typescript", label: "TypeScript" },
+        { key: "python", label: "Python" },
+        { key: "c++", label: "C++" },
+        { key: "c#", label: "C#" },
+        { key: "php", label: "PHP" },
+        { key: "go ", label: "Go" },
+        { key: "golang", label: "Go" },
+        { key: "java", label: "Java" },
+        { key: "rust", label: "Rust" },
+      ];
+
+      const addedForOrder = new Set<string>();
+      for (const lang of languages) {
+        if (title.includes(lang.key) && !addedForOrder.has(lang.label)) {
+          stats[lang.label] = (stats[lang.label] || 0) + 1;
+          addedForOrder.add(lang.label);
+        }
+      }
+    }
+    return stats;
+  }, [filteredOrders]);
 
   const fetchOrders = async () => {
     try {
@@ -120,18 +157,40 @@ export default function MiniAppPage() {
   };
 
   const runParse = async () => {
+    setParseError(null);
+    setParseLangStats(null);
+    setParseTotal(null);
+    setShowParseModal(true);
+    setParseProgress(25);
     setParseLoading(true);
     try {
       const res = await fetch("/api/parse", { method: "POST" });
+      setParseProgress(50);
       const data = await res.json();
       if (data.ok) {
-        alert(`Найдено: ${data.total} объявлений. Логи придут в бот.`);
+        const total = typeof data.total === "number" ? data.total : 0;
+        setParseTotal(total);
+
+        // если API вернул распределение по языкам — используем его,
+        // иначе считаем по уже отфильтрованным заказам после перезагрузки
+        if (data.byLanguage && typeof data.byLanguage === "object") {
+          setParseLangStats(data.byLanguage as LanguageStats);
+        }
+
+        setParseProgress(75);
         await load();
+
+        if (!data.byLanguage) {
+          setParseLangStats(languageStats);
+        }
+        setParseProgress(100);
       } else {
-        alert("Ошибка: " + (data.error || "неизвестная"));
+        const msg = data.error || "неизвестная ошибка";
+        setParseError(msg);
       }
     } catch (e) {
-      alert("Ошибка запроса: " + (e instanceof Error ? e.message : String(e)));
+      const msg = e instanceof Error ? e.message : String(e);
+      setParseError(msg);
     } finally {
       setParseLoading(false);
     }
@@ -366,6 +425,113 @@ export default function MiniAppPage() {
             )}
           </section>
         </div>
+
+        {showParseModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <div className="w-full max-w-md mx-4 rounded-2xl bg-[#111827] border border-amber-500/30 shadow-xl p-5 space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-semibold text-amber-300">Работа парсеров</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Собираем и фильтруем заказы под твой стек
+                  </p>
+                </div>
+                {!parseLoading && (
+                  <button
+                    type="button"
+                    onClick={() => setShowParseModal(false)}
+                    className="p-1.5 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition"
+                    aria-label="Закрыть"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between text-xs mb-1.5">
+                  <span className="text-gray-400">Прогресс</span>
+                  <span className="text-amber-300 font-medium">
+                    {parseProgress}%
+                  </span>
+                </div>
+                <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 transition-all duration-500"
+                    style={{ width: `${parseProgress}%` }}
+                  />
+                </div>
+                {parseLoading && (
+                  <div className="mt-2 flex items-center gap-2 text-[11px] text-gray-400">
+                    <span className="inline-flex h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+                    <span>Парсим FL.ru, Kwork, Habr и Weblancer…</span>
+                  </div>
+                )}
+              </div>
+
+              {parseError && (
+                <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+                  Ошибка при запуске парсеров: {parseError}
+                </div>
+              )}
+
+              {!parseLoading && !parseError && (parseTotal !== null || (parseLangStats && Object.keys(parseLangStats).length > 0)) && (
+                <div className="space-y-3">
+                  {parseTotal !== null && (
+                    <div>
+                      <div className="text-xs text-gray-400 mb-1">Найдено всего:</div>
+                      <div className="text-xl font-semibold text-amber-300">
+                        {parseTotal} объявлений
+                      </div>
+                    </div>
+                  )}
+
+                  {parseLangStats && Object.keys(parseLangStats).length > 0 && (
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs text-gray-400">
+                          По языкам программирования
+                        </span>
+                        <span className="text-[11px] text-gray-500">
+                          Нажми на язык, чтобы перейти к заказам
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto pt-0.5">
+                        {Object.entries(parseLangStats)
+                          .sort((a, b) => b[1] - a[1])
+                          .map(([lang, count]) => (
+                            <button
+                              key={lang}
+                              type="button"
+                              onClick={() => {
+                                setShowParseModal(false);
+                              }}
+                              className="px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-100 text-xs flex items-center gap-1.5 border border-amber-500/30 hover:bg-amber-500/25 transition"
+                            >
+                              <span>{lang}</span>
+                              <span className="text-[11px] bg-black/30 rounded-full px-1.5 py-0.5">
+                                {count}
+                              </span>
+                            </button>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {!parseLoading && !parseError && (
+                <button
+                  type="button"
+                  onClick={() => setShowParseModal(false)}
+                  className="w-full mt-1 py-2.5 rounded-xl bg-amber-500 text-black text-sm font-semibold hover:bg-amber-400 transition"
+                >
+                  Смотреть отфильтрованные заказы
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
