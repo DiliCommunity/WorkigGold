@@ -8,13 +8,19 @@ const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36";
 
 function parseBudget(text: string): { value?: number; currency: string } {
-  const rubMatch = text.match(/(\d[\d\s]*)\s*₽|руб/i);
-  if (rubMatch) {
+  const clean = text.replace(/\u00a0/g, " ");
+  const rubMatch = clean.match(/(\d[\d\s]*)\s*(?:₽|руб\.?|RUB)/i);
+  if (rubMatch?.[1]) {
     const val = parseFloat(rubMatch[1].replace(/\s/g, ""));
     return { value: isNaN(val) ? undefined : val, currency: "RUB" };
   }
-  const numMatch = text.match(/(\d[\d\s]+)/);
-  if (numMatch) {
+  const usdMatch = clean.match(/(\d[\d\s]*)\s*(?:\$|USD)/i);
+  if (usdMatch?.[1]) {
+    const val = parseFloat(usdMatch[1].replace(/\s/g, ""));
+    return { value: isNaN(val) ? undefined : val, currency: "USD" };
+  }
+  const numMatch = clean.match(/(\d[\d\s]+)/);
+  if (numMatch?.[1]) {
     const val = parseFloat(numMatch[1].replace(/\s/g, ""));
     return { value: isNaN(val) ? undefined : val, currency: "RUB" };
   }

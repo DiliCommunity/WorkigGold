@@ -3,18 +3,20 @@ import { AGENTS } from "@/lib/agents/constants";
 import { sendAgentLogToTelegram } from "@/lib/telegram-logger";
 import type { ParserResult, ParsedOrder } from "./types";
 
-const WEBLANCER_URL = "https://www.weblancer.net/jobs/";
+// Актуальная лента заказов на Weblancer сейчас в /freelance/ (а не /jobs/)
+const WEBLANCER_URL = "https://www.weblancer.net/freelance/";
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36";
 
 function parseBudget(text: string): { value?: number; currency: string } {
-  const rubMatch = text.match(/(\d[\d\s]*)\s*₽|руб|RUB/i);
-  if (rubMatch) {
+  const clean = text.replace(/\u00a0/g, " ");
+  const rubMatch = clean.match(/(\d[\d\s]*)\s*(?:₽|руб\.?|RUB)/i);
+  if (rubMatch?.[1]) {
     const val = parseFloat(rubMatch[1].replace(/\s/g, ""));
     return { value: isNaN(val) ? undefined : val, currency: "RUB" };
   }
-  const usdMatch = text.match(/(\d[\d\s]*)\s*\$|USD/i);
-  if (usdMatch) {
+  const usdMatch = clean.match(/(\d[\d\s]*)\s*(?:\$|USD)/i);
+  if (usdMatch?.[1]) {
     const val = parseFloat(usdMatch[1].replace(/\s/g, ""));
     return { value: isNaN(val) ? undefined : val, currency: "USD" };
   }
@@ -54,33 +56,31 @@ export async function parseWeblancer(): Promise<ParserResult> {
       const html = await res.text();
       const $ = cheerio.load(html);
 
-      $("a[href*='/jobs/']").each((_, el) => {
-        const $a = $(el);
-        const href = $a.attr("href") || "";
-        const match = href.match(/\/jobs\/(\d+)/);
-        if (!match) return;
+      // Weblancer: карточки-статьи с ссылкой на /freelance/...-<id>/
+      $("article").each((_, el) => {
+        const $article = $(el);
+        const $a = $article.find("a[href*='/freelance/']").first();
+        const href = ($a.attr("href") || "").trim();
+        if (!href) return;
 
-        const id = match[1];
+        // пример: /freelance/veb-programmirovanie-31/dorabotka-python...-1264885/
+        const idMatch = href.match(/-(\d+)\/?$/);
+        const id = idMatch?.[1];
+        if (!id) return;
         if (seen.has(id)) return;
         seen.add(id);
 
-        const title =
-          $a.find("[class*='title'], h2, h3").first().text().trim() ||
-          $a.text().trim().split("\n")[0]?.trim().slice(0, 300);
-
+        const title = ($a.text() || "").trim().slice(0, 300);
         if (!title || title.length < 5) return;
 
-        const block = $a.closest("[class*='job'], [class*='item']");
-        const desc =
-          block.find("[class*='desc'], [class*='text']").first().text().trim().slice(0, 500) ||
-          title;
-        const budgetText = block.text();
+        const desc = $article.find("p").first().text().trim().slice(0, 500) || title;
+        const budgetText = $article.text();
         const { value: budget, currency } = parseBudget(budgetText);
 
         const urlFull = href.startsWith("http") ? href : `https://www.weblancer.net${href}`;
 
         orders.push({
-          title: title.slice(0, 300),
+          title,
           description: desc,
           platform: "Weblancer",
           platformOrderId: id,
