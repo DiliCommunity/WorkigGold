@@ -25,12 +25,12 @@ export const AGENTS = {
     description: "Собирает заказы с Kwork",
     platform: "Kwork",
   },
-  /** Habr Freelance — парсер */
-  HABR_DOZORNY: {
-    id: "habr-dozorny",
-    name: "Хабр-Дозорный",
-    description: "Мониторит Habr Freelance",
-    platform: "Habr Freelance",
+  /** Freelance.ru — парсер */
+  FREELANCE_RU_SKANER: {
+    id: "freelance-ru-skaner",
+    name: "Фрилансру-Сканёр",
+    description: "Сканирует проекты на freelance.ru",
+    platform: "Freelance.ru",
   },
   /** Weblancer — парсер */
   WEBLANCER_SKANER: {
@@ -38,6 +38,13 @@ export const AGENTS = {
     name: "Веблансер-Сканёр",
     description: "Сканирует заказы на Weblancer",
     platform: "Weblancer",
+  },
+  /** Guru — парсер */
+  GURU_SKANER: {
+    id: "guru-skaner",
+    name: "Гуру-Сканёр",
+    description: "Сканирует заказы на guru.com",
+    platform: "Guru",
   },
   /** Общий оркестратор */
   DISPATCHER: {

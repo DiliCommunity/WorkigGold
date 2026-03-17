@@ -42,6 +42,7 @@ export async function parseKwork(): Promise<ParserResult> {
 
     const orders: ParsedOrder[] = [];
     const seen = new Set<string>();
+    let firstPageHtml: string | null = null;
 
     for (let page = 1; page <= 3; page++) {
       const url = page === 1 ? KWORK_URL : `${KWORK_URL}?page=${page}`;
@@ -59,6 +60,7 @@ export async function parseKwork(): Promise<ParserResult> {
       }
 
       const html = await res.text();
+      if (page === 1) firstPageHtml = html;
       const $ = cheerio.load(html);
 
       // Kwork: ссылки на проекты
@@ -98,6 +100,20 @@ export async function parseKwork(): Promise<ParserResult> {
           rawData: {},
         });
       });
+    }
+
+    // Kwork всё чаще рендерит ленту проектов на клиенте (JS), и в HTML нет ссылок на проекты.
+    // В таком случае возвращаем явную ошибку (а не "0 заказов без объяснения").
+    if (orders.length === 0 && firstPageHtml) {
+      const hasAnyProjectHref =
+        firstPageHtml.includes("/projects/") ||
+        firstPageHtml.includes("kwork.ru/projects/") ||
+        firstPageHtml.includes("/project/");
+      if (!hasAnyProjectHref) {
+        throw new Error(
+          "Страница /projects рендерится на клиенте (JS). В HTML нет ссылок на проекты — нужен другой источник/эндпоинт."
+        );
+      }
     }
 
     const duration = Date.now() - start;

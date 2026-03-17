@@ -9,7 +9,22 @@ const statusColors: Record<string, string> = {
   IN_PROGRESS: "bg-primary/20 text-primary border-primary/30",
 };
 
-export function OrderCard({ order }: { order: (typeof import("@/lib/mock-data").orders)[0] }) {
+export type UiOrder = {
+  id: string;
+  title: string;
+  description: string;
+  platform: string;
+  budget: number | null;
+  currency: string;
+  clientName: string | null;
+  skills: string[];
+  status: string;
+  filterScore: number | null;
+  url: string | null;
+  createdAt: string | Date;
+};
+
+export function OrderCard({ order }: { order: UiOrder }) {
   const statusStyle = statusColors[order.status] || "bg-white/10 text-foreground";
 
   return (
@@ -43,7 +58,7 @@ export function OrderCard({ order }: { order: (typeof import("@/lib/mock-data").
           <div className="flex items-center gap-4 text-sm text-foreground/50">
             <span className="flex items-center gap-1">
               <DollarSign className="w-4 h-4" />
-              {order.budget} {order.currency}
+              {order.budget ?? "—"} {order.currency}
             </span>
             <span className="flex items-center gap-1">
               <Calendar className="w-4 h-4" />
@@ -53,14 +68,16 @@ export function OrderCard({ order }: { order: (typeof import("@/lib/mock-data").
           </div>
         </div>
         <a
-          href="#"
+          href={order.url || "#"}
+          target={order.url ? "_blank" : undefined}
+          rel={order.url ? "noreferrer" : undefined}
           className="p-2 rounded-lg hover:bg-card-hover text-primary shrink-0"
           title="Открыть"
         >
           <ExternalLink className="w-5 h-5" />
         </a>
       </div>
-      {order.filterScore && (
+      {order.filterScore != null && (
         <p className="text-xs text-foreground/40 mt-3">
           Релевантность: {Math.round(order.filterScore * 100)}%
         </p>

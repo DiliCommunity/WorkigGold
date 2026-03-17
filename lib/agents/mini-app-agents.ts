@@ -13,11 +13,17 @@ export interface MiniAppAgent {
 /** Агенты-сборщики: можно фильтровать заказы по платформе */
 export const MINI_APP_AGENTS: MiniAppAgent[] = [
   { id: "fl-razvedchik", name: "Фл-Разведчик", platform: "FL.ru", platformFilter: "FL.ru", description: "Сканирует FL.ru" },
-  { id: "kwork-sborschik", name: "Кворк-Сборщик", platform: "Kwork", platformFilter: "Kwork", description: "Собирает заказы Kwork" },
-  { id: "habr-dozorny", name: "Хабр-Дозорный", platform: "Habr", platformFilter: "Habr Freelance", description: "Мониторит Habr" },
+  {
+    id: "freelance-ru-skaner",
+    name: "Фрилансру-Сканёр",
+    platform: "Freelance.ru",
+    platformFilter: "Freelance.ru",
+    description: "Сканирует freelance.ru",
+  },
   { id: "weblancer-skaner", name: "Веблансер-Сканёр", platform: "Weblancer", platformFilter: "Weblancer", description: "Сканирует Weblancer" },
+  { id: "guru-skaner", name: "Гуру-Сканёр", platform: "Guru", platformFilter: "Guru", description: "Сканирует guru.com" },
   { id: "dispatcher", name: "Диспетчер", platform: "Все", platformFilter: null, description: "Все платформы" },
   { id: "vestnik", name: "Вестник", platform: "Уведомления", platformFilter: null, description: "Уведомления в бот" },
 ];
 
-export const GATHER_AGENT_IDS = ["fl-razvedchik", "kwork-sborschik", "habr-dozorny", "weblancer-skaner"];
+export const GATHER_AGENT_IDS = ["fl-razvedchik", "freelance-ru-skaner", "weblancer-skaner", "guru-skaner"];
