@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect } from "react";
 import {
   LayoutDashboard,
   MessageSquare,
@@ -33,29 +34,48 @@ export function Sidebar() {
         <h1 className="text-xl font-bold text-primary">WorkingGold</h1>
         <p className="text-xs text-secondary mt-0.5">Админ панель</p>
       </div>
-      <nav className="flex-1 p-4 space-y-1">
-        {nav.map(({ href, label, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            className={cn(
-              "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors",
-              pathname === href ||
-              (href === "/chat" && pathname.startsWith("/chat")) ||
-              (href === "/calendar" && pathname.startsWith("/calendar")) ||
-              (href === "/agents" && pathname.startsWith("/agents"))
-                ? "bg-primary/20 text-primary border border-primary/30"
-                : "text-foreground/70 hover:bg-card-hover hover:text-foreground"
-            )}
-          >
-            <Icon className="w-5 h-5" />
-            {label}
-          </Link>
-        ))}
-      </nav>
+      <SidebarNav />
       <div className="p-4 border-t border-white/5 text-xs text-foreground/50">
         v0.1.0
       </div>
     </aside>
+  );
+}
+
+export function SidebarNav({
+  onNavigate,
+}: {
+  onNavigate?: () => void;
+}) {
+  const pathname = usePathname();
+
+  // Если открыт drawer — при смене маршрута закроем его (на случай навигации не по клику).
+  useEffect(() => {
+    onNavigate?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
+  return (
+    <nav className="flex-1 p-4 space-y-1">
+      {nav.map(({ href, label, icon: Icon }) => (
+        <Link
+          key={href}
+          href={href}
+          onClick={() => onNavigate?.()}
+          className={cn(
+            "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors",
+            pathname === href ||
+              (href === "/chat" && pathname.startsWith("/chat")) ||
+              (href === "/calendar" && pathname.startsWith("/calendar")) ||
+              (href === "/agents" && pathname.startsWith("/agents"))
+              ? "bg-primary/20 text-primary border border-primary/30"
+              : "text-foreground/70 hover:bg-card-hover hover:text-foreground"
+          )}
+        >
+          <Icon className="w-5 h-5" />
+          {label}
+        </Link>
+      ))}
+    </nav>
   );
 }
