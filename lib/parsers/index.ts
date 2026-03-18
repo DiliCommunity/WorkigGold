@@ -1,7 +1,9 @@
 import { AGENTS } from "@/lib/agents/constants";
 import { sendAgentLogToTelegram } from "@/lib/telegram-logger";
 import { prisma } from "@/lib/prisma";
-import { matchesProgrammerStack } from "@/lib/filters/skills";
+import { getFilterConfig } from "@/lib/filters/skills";
+import type { KeywordFilterConfig } from "@/lib/filters/keyword-filter";
+import { scoreTextAgainstKeywords } from "@/lib/filters/keyword-filter";
 import { parseFLru } from "./fl-ru";
 import { parseFreelanceRu } from "./freelance-ru";
 import { parseWeblancer } from "./weblancer";
@@ -19,7 +21,12 @@ export interface RunAllResult {
   errors: string[];
 }
 
-async function saveOrder(order: ParsedOrder): Promise<boolean> {
+type SaveMeta = {
+  status?: "NEW" | "FILTERED" | "APPROVED" | "REJECTED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+  filterScore?: number | null;
+};
+
+async function saveOrder(order: ParsedOrder, meta: SaveMeta): Promise<boolean> {
   const key = order.platformOrderId
     ? { platform: order.platform, platformOrderId: order.platformOrderId }
     : { platform: order.platform, title: order.title };
@@ -39,14 +46,25 @@ async function saveOrder(order: ParsedOrder): Promise<boolean> {
       platformOrderId: order.platformOrderId,
       budget: order.budget,
       currency: order.currency,
+      skills: [],
       url: order.url,
+      status: (meta.status as any) ?? undefined,
+      filterScore: meta.filterScore ?? undefined,
       rawData: order.rawData as object,
     },
   });
   return true;
 }
 
-export async function runAllParsers(): Promise<RunAllResult> {
+export type RunAllParsersOptions = {
+  /**
+   * Ключевые слова, выбранные админом (например из mini-app).
+   * Если не передано — используем env/default из `lib/filters/skills.ts`.
+   */
+  keywordFilter?: KeywordFilterConfig;
+};
+
+export async function runAllParsers(options: RunAllParsersOptions = {}): Promise<RunAllResult> {
   const dispatcher = AGENTS.DISPATCHER;
   const start = Date.now();
   const errors: string[] = [];
@@ -81,13 +99,23 @@ export async function runAllParsers(): Promise<RunAllResult> {
   let saved = 0;
   let filtered = 0;
   const allOrders = [...fl.orders, ...freelanceRu.orders, ...weblancer.orders, ...guru.orders];
+
+  const defaultCfg = getFilterConfig();
+  const cfg: KeywordFilterConfig = options.keywordFilter
+    ? options.keywordFilter
+    : { include: defaultCfg.skills, exclude: defaultCfg.excludeKeywords, minIncludeMatches: 1 };
+
   for (const order of allOrders) {
-    if (!matchesProgrammerStack(order.title, order.description)) {
+    const { matches, score } = scoreTextAgainstKeywords(
+      `${order.title} ${order.description ?? ""}`,
+      cfg
+    );
+    if (!matches) {
       filtered++;
       continue;
     }
     try {
-      const ok = await saveOrder(order);
+      const ok = await saveOrder(order, { status: "FILTERED", filterScore: score / 100 });
       if (ok) saved++;
     } catch (e) {
       errors.push(`Save: ${order.title.slice(0, 50)} - ${e}`);

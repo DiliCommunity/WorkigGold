@@ -5,7 +5,9 @@ import Link from "next/link";
 import Script from "next/script";
 import { X, ExternalLink, ChevronRight, Activity, ArrowLeft } from "lucide-react";
 import { MINI_APP_AGENTS, GATHER_AGENT_IDS, type MiniAppAgent } from "@/lib/agents/mini-app-agents";
-import { matchesProgrammerStack, STACK_DISPLAY } from "@/lib/filters/skills";
+import { STACK_DISPLAY, getFilterConfig } from "@/lib/filters/skills";
+import type { KeywordFilterConfig } from "@/lib/filters/keyword-filter";
+import { scoreTextAgainstKeywords } from "@/lib/filters/keyword-filter";
 
 interface Order {
   id: string;
@@ -66,14 +68,33 @@ export default function MiniAppPage() {
   const [selectedAgent, setSelectedAgent] = useState<MiniAppAgent | null>(null);
   const [agentLogs, setAgentLogs] = useState<AgentLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
+  const [activePlatform, setActivePlatform] = useState<string | null>(null);
+  const [activeFolder, setActiveFolder] = useState<"all" | "favorites" | "urgent">("all");
+  const [keywordFilter, setKeywordFilter] = useState<KeywordFilterConfig>(() => {
+    const def = getFilterConfig();
+    return { include: def.skills, exclude: def.excludeKeywords, minIncludeMatches: 1 };
+  });
+  const [includeDraft, setIncludeDraft] = useState("");
+  const [excludeDraft, setExcludeDraft] = useState("");
+  const [minMatches, setMinMatches] = useState<number>(1);
+  const [favorites, setFavorites] = useState<Record<string, "favorites" | "urgent">>({});
 
   const platformFilter = selectedAgent?.platformFilter ?? null;
   const byPlatform = platformFilter
     ? orders.filter((o) => o.platform === platformFilter)
     : orders;
-  const filteredOrders = byPlatform.filter((o) =>
-    matchesProgrammerStack(o.title, o.description || "")
-  );
+  const baseByPlatform = activePlatform ? byPlatform.filter((o) => o.platform === activePlatform) : byPlatform;
+  const filteredOrders = baseByPlatform.filter((o) => {
+    const res = scoreTextAgainstKeywords(`${o.title} ${o.description || ""}`, {
+      ...keywordFilter,
+      minIncludeMatches: minMatches,
+    });
+    return res.matches;
+  });
+  const folderOrders =
+    activeFolder === "all"
+      ? filteredOrders
+      : filteredOrders.filter((o) => favorites[o.id] === activeFolder);
 
   const languageStats = useMemo<LanguageStats>(() => {
     const stats: LanguageStats = {};
@@ -164,7 +185,13 @@ export default function MiniAppPage() {
     setParseProgress(25);
     setParseLoading(true);
     try {
-      const res = await fetch("/api/parse", { method: "POST" });
+      const res = await fetch("/api/parse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          keywordFilter: { ...keywordFilter, minIncludeMatches: minMatches },
+        }),
+      });
       setParseProgress(50);
       const data = await res.json();
       if (data.ok) {
@@ -227,6 +254,42 @@ export default function MiniAppPage() {
     };
   }, []);
 
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("wg_keywordFilter");
+      if (raw) {
+        const parsed = JSON.parse(raw) as { keywordFilter?: KeywordFilterConfig; minMatches?: number };
+        if (parsed.keywordFilter?.include && parsed.keywordFilter?.exclude) {
+          setKeywordFilter(parsed.keywordFilter);
+          setMinMatches(parsed.minMatches ?? parsed.keywordFilter.minIncludeMatches ?? 1);
+        }
+      }
+      const favRaw = localStorage.getItem("wg_favorites");
+      if (favRaw) setFavorites(JSON.parse(favRaw));
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        "wg_keywordFilter",
+        JSON.stringify({ keywordFilter, minMatches })
+      );
+    } catch {
+      // ignore
+    }
+  }, [keywordFilter, minMatches]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("wg_favorites", JSON.stringify(favorites));
+    } catch {
+      // ignore
+    }
+  }, [favorites]);
+
   return (
     <>
       <Script src="https://telegram.org/js/telegram-web-app.js" strategy="afterInteractive" />
@@ -278,6 +341,82 @@ export default function MiniAppPage() {
           >
             {parseLoading ? "Запуск парсеров..." : "Запустить парсеры"}
           </button>
+
+          <section className="mb-6">
+            <h2 className="text-sm font-medium text-gray-400 mb-2">Фильтры админа</h2>
+            <div className="bg-white/5 rounded-xl p-4 border border-white/10 space-y-3">
+              <div className="text-xs text-gray-400">
+                Include (через запятую) — например: <span className="text-amber-300">react, next.js, python</span>
+              </div>
+              <input
+                value={includeDraft}
+                onChange={(e) => setIncludeDraft(e.target.value)}
+                placeholder="react, next.js, python"
+                className="w-full rounded-lg bg-black/20 border border-white/10 px-3 py-2 text-sm outline-none focus:border-amber-500/40"
+              />
+              <div className="text-xs text-gray-400">
+                Exclude (через запятую) — например: <span className="text-amber-300">wb, ozon, маркетплейс, дизайн</span>
+              </div>
+              <input
+                value={excludeDraft}
+                onChange={(e) => setExcludeDraft(e.target.value)}
+                placeholder="wb, ozon, маркетплейс, дизайн"
+                className="w-full rounded-lg bg-black/20 border border-white/10 px-3 py-2 text-sm outline-none focus:border-amber-500/40"
+              />
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-xs text-gray-400">Мин. совпадений include</div>
+                <select
+                  value={String(minMatches)}
+                  onChange={(e) => setMinMatches(parseInt(e.target.value, 10))}
+                  className="rounded-lg bg-black/20 border border-white/10 px-3 py-2 text-sm outline-none focus:border-amber-500/40"
+                >
+                  {[1, 2, 3].map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="flex-1 py-2 rounded-lg bg-amber-500/90 text-black text-sm font-semibold"
+                  onClick={() => {
+                    const include = includeDraft
+                      .split(",")
+                      .map((s) => s.trim())
+                      .filter(Boolean);
+                    const exclude = excludeDraft
+                      .split(",")
+                      .map((s) => s.trim())
+                      .filter(Boolean);
+                    setKeywordFilter((prev) => ({
+                      ...prev,
+                      include: include.length ? include : prev.include,
+                      exclude: exclude.length ? exclude : prev.exclude,
+                    }));
+                    setIncludeDraft("");
+                    setExcludeDraft("");
+                  }}
+                >
+                  Применить
+                </button>
+                <button
+                  type="button"
+                  className="px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-sm"
+                  onClick={() => {
+                    const def = getFilterConfig();
+                    setKeywordFilter({ include: def.skills, exclude: def.excludeKeywords, minIncludeMatches: 1 });
+                    setMinMatches(1);
+                    setIncludeDraft("");
+                    setExcludeDraft("");
+                  }}
+                >
+                  Сброс
+                </button>
+              </div>
+            </div>
+          </section>
 
           {selectedAgent && GATHER_AGENT_IDS.includes(selectedAgent.id) && (
             <section className="mb-6">
@@ -365,14 +504,47 @@ export default function MiniAppPage() {
                 <div className="text-2xl font-bold text-amber-400 mb-2">
                   {stats.total} заказов
                 </div>
-                <div className="flex flex-wrap gap-2 text-sm">
+                <div className="flex flex-wrap gap-2 text-sm mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setActivePlatform(null)}
+                    className={`px-2 py-1 rounded border transition ${
+                      activePlatform === null
+                        ? "bg-amber-500/25 text-amber-200 border-amber-500/40"
+                        : "bg-white/5 text-gray-300 border-white/10 hover:border-amber-500/30"
+                    }`}
+                  >
+                    Все биржи
+                  </button>
                   {Object.entries(stats.byPlatform).map(([p, n]) => (
-                    <span
+                    <button
                       key={p}
-                      className="px-2 py-1 rounded bg-amber-500/20 text-amber-300"
+                      type="button"
+                      onClick={() => setActivePlatform(p)}
+                      className={`px-2 py-1 rounded border transition ${
+                        activePlatform === p
+                          ? "bg-amber-500/25 text-amber-200 border-amber-500/40"
+                          : "bg-white/5 text-gray-300 border-white/10 hover:border-amber-500/30"
+                      }`}
                     >
                       {p}: {n}
-                    </span>
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  {(["all", "favorites", "urgent"] as const).map((f) => (
+                    <button
+                      key={f}
+                      type="button"
+                      onClick={() => setActiveFolder(f)}
+                      className={`flex-1 px-2 py-2 rounded-lg border text-sm transition ${
+                        activeFolder === f
+                          ? "bg-amber-500/25 text-amber-200 border-amber-500/40"
+                          : "bg-white/5 text-gray-300 border-white/10 hover:border-amber-500/30"
+                      }`}
+                    >
+                      {f === "all" ? "Все" : f === "favorites" ? "Избранное" : "Срочно"}
+                    </button>
                   ))}
                 </div>
               </div>
@@ -397,30 +569,75 @@ export default function MiniAppPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                {filteredOrders.map((o) => (
-                  <a
-                    key={o.id}
-                    href={o.url || "#"}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block bg-white/5 rounded-xl p-4 border border-white/10 hover:border-amber-500/30 transition"
-                  >
-                    <div className="font-medium line-clamp-1 flex items-start justify-between gap-2">
-                      <span className="flex-1 min-w-0">{o.title}</span>
-                      <ExternalLink className="w-4 h-4 shrink-0 text-amber-500/70" />
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1 flex justify-between items-center gap-2">
-                      <span className="px-1.5 py-0.5 rounded bg-white/10 text-gray-400">
-                        {o.platform}
-                      </span>
-                      {o.budget && (
-                        <span>
-                          {o.budget} {o.currency}
+                {folderOrders.map((o) => {
+                  const fav = favorites[o.id];
+                  return (
+                    <div
+                      key={o.id}
+                      className="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-amber-500/30 transition"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <a
+                          href={o.url || "#"}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium line-clamp-2 flex-1 min-w-0"
+                        >
+                          {o.title}
+                        </a>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            className={`px-2 py-1 rounded-lg text-xs border ${
+                              fav === "favorites"
+                                ? "bg-amber-500/25 border-amber-500/40 text-amber-200"
+                                : "bg-white/5 border-white/10 text-gray-300"
+                            }`}
+                            onClick={() =>
+                              setFavorites((prev) => {
+                                const next = { ...prev };
+                                if (next[o.id] === "favorites") delete next[o.id];
+                                else next[o.id] = "favorites";
+                                return next;
+                              })
+                            }
+                          >
+                            ☆
+                          </button>
+                          <button
+                            type="button"
+                            className={`px-2 py-1 rounded-lg text-xs border ${
+                              fav === "urgent"
+                                ? "bg-red-500/20 border-red-500/40 text-red-200"
+                                : "bg-white/5 border-white/10 text-gray-300"
+                            }`}
+                            onClick={() =>
+                              setFavorites((prev) => {
+                                const next = { ...prev };
+                                if (next[o.id] === "urgent") delete next[o.id];
+                                else next[o.id] = "urgent";
+                                return next;
+                              })
+                            }
+                          >
+                            !
+                          </button>
+                          <ExternalLink className="w-4 h-4 shrink-0 text-amber-500/70" />
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-2 flex justify-between items-center gap-2">
+                        <span className="px-1.5 py-0.5 rounded bg-white/10 text-gray-400">
+                          {o.platform}
                         </span>
-                      )}
+                        {o.budget && (
+                          <span>
+                            {o.budget} {o.currency}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </a>
-                ))}
+                  );
+                })}
               </div>
             )}
           </section>
@@ -464,7 +681,7 @@ export default function MiniAppPage() {
                 {parseLoading && (
                   <div className="mt-2 flex items-center gap-2 text-[11px] text-gray-400">
                     <span className="inline-flex h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
-                    <span>Парсим FL.ru, Kwork, Habr и Weblancer…</span>
+                    <span>Парсим FL.ru, Freelance.ru, Weblancer и Guru…</span>
                   </div>
                 )}
               </div>
