@@ -5,6 +5,7 @@ export interface ParsedOrder {
   platformOrderId?: string;
   budget?: number;
   currency: string;
+  clientName?: string | null;
   url?: string;
   rawData?: Record<string, unknown>;
 }

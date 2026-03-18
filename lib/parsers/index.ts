@@ -46,6 +46,7 @@ async function saveOrder(order: ParsedOrder, meta: SaveMeta): Promise<boolean> {
       platformOrderId: order.platformOrderId,
       budget: order.budget,
       currency: order.currency,
+      clientName: order.clientName ?? null,
       skills: [],
       url: order.url,
       status: (meta.status as any) ?? undefined,
@@ -115,7 +116,9 @@ export async function runAllParsers(options: RunAllParsersOptions = {}): Promise
       continue;
     }
     try {
-      const ok = await saveOrder(order, { status: "FILTERED", filterScore: score / 100 });
+      // Нормализуем скор: 0..1, где 1 = много include совпадений
+      const normalized = Math.max(0, Math.min(1, score / 30));
+      const ok = await saveOrder(order, { status: "FILTERED", filterScore: normalized });
       if (ok) saved++;
     } catch (e) {
       errors.push(`Save: ${order.title.slice(0, 50)} - ${e}`);

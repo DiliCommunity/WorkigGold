@@ -78,6 +78,10 @@ export default function MiniAppPage() {
   const [excludeDraft, setExcludeDraft] = useState("");
   const [minMatches, setMinMatches] = useState<number>(1);
   const [favorites, setFavorites] = useState<Record<string, "favorites" | "urgent">>({});
+  const [viewMode, setViewMode] = useState<"orders" | "customers">("orders");
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<"newest" | "budgetDesc" | "budgetAsc">("newest");
+  const [activeCustomer, setActiveCustomer] = useState<string | null>(null);
 
   const platformFilter = selectedAgent?.platformFilter ?? null;
   const byPlatform = platformFilter
@@ -95,6 +99,45 @@ export default function MiniAppPage() {
     activeFolder === "all"
       ? filteredOrders
       : filteredOrders.filter((o) => favorites[o.id] === activeFolder);
+
+  const searchedOrders = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const base = activeCustomer
+      ? folderOrders.filter((o) => ((o as any).clientName || "").toLowerCase() === activeCustomer)
+      : folderOrders;
+    if (!q) return base;
+    return base.filter((o) => {
+      const t = `${o.title} ${o.description ?? ""}`.toLowerCase();
+      return t.includes(q);
+    });
+  }, [folderOrders, search, activeCustomer]);
+
+  const sortedOrders = useMemo(() => {
+    const arr = [...searchedOrders];
+    if (sort === "newest") {
+      arr.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+    } else if (sort === "budgetDesc") {
+      arr.sort((a, b) => (b.budget ?? -1) - (a.budget ?? -1));
+    } else if (sort === "budgetAsc") {
+      arr.sort((a, b) => (a.budget ?? Number.MAX_SAFE_INTEGER) - (b.budget ?? Number.MAX_SAFE_INTEGER));
+    }
+    return arr;
+  }, [searchedOrders, sort]);
+
+  const customers = useMemo(() => {
+    const map = new Map<string, { name: string; count: number; lastAt: number; platforms: Set<string> }>();
+    for (const o of orders as any[]) {
+      const name = (o.clientName || "").trim();
+      if (!name) continue;
+      const key = name.toLowerCase();
+      const item = map.get(key) ?? { name, count: 0, lastAt: 0, platforms: new Set<string>() };
+      item.count += 1;
+      item.platforms.add(o.platform);
+      item.lastAt = Math.max(item.lastAt, +new Date(o.createdAt));
+      map.set(key, item);
+    }
+    return Array.from(map.values()).sort((a, b) => b.lastAt - a.lastAt);
+  }, [orders]);
 
   const languageStats = useMemo<LanguageStats>(() => {
     const stats: LanguageStats = {};
@@ -557,9 +600,95 @@ export default function MiniAppPage() {
                 ? `Заказы с ${selectedAgent.platform}`
                 : "Последние заказы"}
             </h2>
+            <div className="mb-3 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setViewMode("orders")}
+                className={`px-3 py-2 rounded-lg border text-sm transition ${
+                  viewMode === "orders"
+                    ? "bg-amber-500/25 text-amber-200 border-amber-500/40"
+                    : "bg-white/5 text-gray-300 border-white/10 hover:border-amber-500/30"
+                }`}
+              >
+                Заказы
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("customers")}
+                className={`px-3 py-2 rounded-lg border text-sm transition ${
+                  viewMode === "customers"
+                    ? "bg-amber-500/25 text-amber-200 border-amber-500/40"
+                    : "bg-white/5 text-gray-300 border-white/10 hover:border-amber-500/30"
+                }`}
+              >
+                Заказчики
+              </button>
+            </div>
+            <div className="mb-4 grid grid-cols-1 gap-2">
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Поиск…"
+                className="w-full rounded-lg bg-black/20 border border-white/10 px-3 py-2 text-sm outline-none focus:border-amber-500/40"
+              />
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as any)}
+                className="w-full rounded-lg bg-black/20 border border-white/10 px-3 py-2 text-sm outline-none focus:border-amber-500/40"
+              >
+                <option value="newest">Сначала новые</option>
+                <option value="budgetDesc">Бюджет ↓</option>
+                <option value="budgetAsc">Бюджет ↑</option>
+              </select>
+            </div>
+            {activeCustomer && (
+              <div className="mb-3 text-xs text-gray-400 flex items-center justify-between gap-2">
+                <span>Фильтр по заказчику: <span className="text-amber-200">{activeCustomer}</span></span>
+                <button
+                  type="button"
+                  onClick={() => setActiveCustomer(null)}
+                  className="px-2 py-1 rounded bg-white/10 border border-white/10 hover:border-amber-500/30"
+                >
+                  Сбросить
+                </button>
+              </div>
+            )}
             {loading ? (
               <div className="text-gray-500 text-center py-8">Загрузка...</div>
-            ) : filteredOrders.length === 0 ? (
+            ) : viewMode === "customers" ? (
+              customers.length === 0 ? (
+                <div className="text-gray-500 text-center py-8">
+                  Пока нет заказчиков (нужно, чтобы парсер сохранял clientName)
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {customers
+                    .filter((c) => !search.trim() || c.name.toLowerCase().includes(search.trim().toLowerCase()))
+                    .map((c) => (
+                      <button
+                        key={c.name}
+                        type="button"
+                        onClick={() => {
+                          setViewMode("orders");
+                          setActiveCustomer(c.name.toLowerCase());
+                          setActiveFolder("all");
+                        }}
+                        className="w-full text-left bg-white/5 rounded-xl p-4 border border-white/10 hover:border-amber-500/30 transition"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="font-medium truncate">{c.name}</div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              Биржи: {Array.from(c.platforms).join(", ")}
+                            </div>
+                          </div>
+                          <div className="text-sm text-amber-300 font-semibold shrink-0">{c.count}</div>
+                        </div>
+                      </button>
+                    ))}
+                </div>
+              )
+            ) : sortedOrders.length === 0 ? (
               <div className="text-gray-500 text-center py-8">
                 {byPlatform.length === 0
                   ? platformFilter
@@ -569,7 +698,7 @@ export default function MiniAppPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                {folderOrders.map((o) => {
+                {sortedOrders.map((o) => {
                   const fav = favorites[o.id];
                   return (
                     <div

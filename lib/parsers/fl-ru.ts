@@ -63,6 +63,13 @@ export async function parseFLru(): Promise<ParserResult> {
       const block = $a.closest(".b-post, .project-item, .project, [class*='post']");
       const desc = block.find(".b-post__txt, .description, [class*='desc']").first().text().trim()
         .slice(0, 500);
+      const clientName = block
+        .find(".b-post__user a, [class*='user'] a, a[href*='/users/'], a[href*='/employer/']")
+        .first()
+        .text()
+        .trim()
+        .replace(/\s+/g, " ")
+        .slice(0, 120) || null;
       const budgetText = block.text();
       const { value: budget, currency } = parseBudget(budgetText);
 
@@ -76,8 +83,9 @@ export async function parseFLru(): Promise<ParserResult> {
         platformOrderId: id,
         budget,
         currency,
+        clientName,
         url,
-        rawData: { rawTitle: title },
+        rawData: { rawTitle: title, clientName },
       });
     });
 
