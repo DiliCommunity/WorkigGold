@@ -11,17 +11,18 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
   const isMiniApp = pathname?.startsWith("/mini-app");
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  if (isMiniApp) {
-    return <>{children}</>;
-  }
-
   useEffect(() => {
+    if (isMiniApp) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setMobileOpen(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [isMiniApp]);
+
+  if (isMiniApp) {
+    return <>{children}</>;
+  }
 
   return (
     <div className="min-h-screen">
