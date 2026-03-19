@@ -705,22 +705,23 @@ export default function MiniAppPage() {
                       key={o.id}
                       className="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-amber-500/30 transition"
                     >
-                      <div className="flex items-start justify-between gap-2">
+                      <div className="space-y-3">
                         <a
                           href={o.url || "#"}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="font-medium line-clamp-2 flex-1 min-w-0"
+                          className="block font-medium line-clamp-2 min-w-0 hover:text-amber-200 transition-colors"
                         >
                           {o.title}
                         </a>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center justify-end gap-2">
                           <button
                             type="button"
-                            className={`px-2 py-1 rounded-lg text-xs border ${
+                            aria-label="Добавить в избранное"
+                            className={`px-2.5 py-1.5 rounded-lg text-xs border transition ${
                               fav === "favorites"
                                 ? "bg-amber-500/25 border-amber-500/40 text-amber-200"
-                                : "bg-white/5 border-white/10 text-gray-300"
+                                : "bg-white/5 border-white/10 text-gray-300 hover:border-amber-500/30"
                             }`}
                             onClick={() =>
                               setFavorites((prev) => {
@@ -731,14 +732,15 @@ export default function MiniAppPage() {
                               })
                             }
                           >
-                            ☆
+                            Избр.
                           </button>
                           <button
                             type="button"
-                            className={`px-2 py-1 rounded-lg text-xs border ${
+                            aria-label="Пометить как срочное"
+                            className={`px-2.5 py-1.5 rounded-lg text-xs border transition ${
                               fav === "urgent"
                                 ? "bg-red-500/20 border-red-500/40 text-red-200"
-                                : "bg-white/5 border-white/10 text-gray-300"
+                                : "bg-white/5 border-white/10 text-gray-300 hover:border-red-500/30"
                             }`}
                             onClick={() =>
                               setFavorites((prev) => {
@@ -749,9 +751,17 @@ export default function MiniAppPage() {
                               })
                             }
                           >
-                            !
+                            Срочно
                           </button>
-                          <ExternalLink className="w-4 h-4 shrink-0 text-amber-500/70" />
+                          <a
+                            href={o.url || "#"}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label="Открыть заказ"
+                            className="p-1.5 rounded-md border border-amber-500/20 text-amber-400/80 hover:text-amber-300 hover:border-amber-500/40 transition"
+                          >
+                            <ExternalLink className="w-4 h-4 shrink-0" />
+                          </a>
                         </div>
                       </div>
                       <div className="text-xs text-gray-500 mt-2 flex justify-between items-center gap-2">

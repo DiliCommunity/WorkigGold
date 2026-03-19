@@ -15,6 +15,12 @@ interface Agent {
   filterFocus?: string[];
 }
 
+interface ChatMessage {
+  role: "bot" | "user";
+  text: string;
+  targetId?: string;
+}
+
 const INITIAL_AGENTS: Agent[] = [
   { id: "fl", name: "Фл-Разведчик", role: "gather", platform: "FL.ru", task: "Сканирует FL.ru" },
   { id: "kwork", name: "Кворк-Сборщик", role: "gather", platform: "Kwork", task: "Собирает заказы Kwork" },
@@ -45,10 +51,11 @@ export default function AgentsPage() {
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [gatherCount, setGatherCount] = useState(4);
   const [analyzeCount, setAnalyzeCount] = useState(2);
-  const [chatMessages, setChatMessages] = useState<{ role: "bot" | "user"; text: string }[]>([
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     { role: "bot", text: "Привет! Я Прораб. Напиши, какую задачу поставить агентам: усилить сбор с бирж или анализ заказов." },
   ]);
   const [chatInput, setChatInput] = useState("");
+  const [chatTargetAgentId, setChatTargetAgentId] = useState<string>("dispatcher");
   const chatEndRef = useRef<HTMLDivElement>(null);
   const diagramRef = useRef<HTMLDivElement>(null);
 
@@ -64,16 +71,21 @@ export default function AgentsPage() {
 
   const activeGatherers = gatherers.slice(0, Math.min(gatherCount, gatherers.length));
   const activeAnalyzers = analyzers.slice(0, Math.min(analyzeCount, analyzers.length));
+  const chatTargetAgent = agents.find((a) => a.id === chatTargetAgentId);
 
   const sendChat = () => {
     const text = chatInput.trim();
     if (!text) return;
-    setChatMessages((m) => [...m, { role: "user", text }]);
+    setChatMessages((m) => [...m, { role: "user", text, targetId: chatTargetAgentId }]);
     setChatInput("");
-    setChatMessages((m) => [
-      ...m,
-      { role: "bot", text: "Принято. Передаю агентам задачу." },
-    ]);
+    const lower = text.toLowerCase();
+    const isContractTask =
+      lower.includes("договор") || lower.includes("заказчик") || lower.includes("чат");
+    const targetName = chatTargetAgent?.name ?? "агент";
+    const acknowledgement = isContractTask
+      ? `Принято. Передал ${targetName} задачу: открыть чат с заказчиком и согласовать договор по заказу.`
+      : `Принято. Передал задачу агенту ${targetName}.`;
+    setChatMessages((m) => [...m, { role: "bot", text: acknowledgement, targetId: chatTargetAgentId }]);
   };
 
   useEffect(() => {
@@ -285,18 +297,37 @@ export default function AgentsPage() {
                     : "bg-secondary/15 text-secondary ml-auto"
                 )}
               >
+                {m.targetId && (
+                  <div className="text-[10px] uppercase tracking-wide opacity-60 mb-0.5">
+                    {agents.find((a) => a.id === m.targetId)?.name ?? "Агент"}
+                  </div>
+                )}
                 {m.text}
               </div>
             ))}
             <div ref={chatEndRef} />
           </div>
           <div className="p-4 border-t border-white/5">
+            <div className="mb-2">
+              <label className="block text-xs text-foreground/50 mb-1">Кому ставим задачу</label>
+              <select
+                value={chatTargetAgentId}
+                onChange={(e) => setChatTargetAgentId(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-foreground"
+              >
+                {agents.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name} {a.platform ? `(${a.platform})` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
             <input
               type="text"
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && sendChat()}
-              placeholder="Сообщение Прорабу..."
+              placeholder="Задача выбранному агенту..."
               className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-foreground placeholder:text-foreground/40"
             />
           </div>
