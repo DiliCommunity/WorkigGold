@@ -5,7 +5,7 @@ import Link from "next/link";
 import Script from "next/script";
 import { X, ExternalLink, ChevronRight, Activity, ArrowLeft } from "lucide-react";
 import { MINI_APP_AGENTS, GATHER_AGENT_IDS, type MiniAppAgent } from "@/lib/agents/mini-app-agents";
-import { STACK_DISPLAY, getFilterConfig } from "@/lib/filters/skills";
+import { STACK_DISPLAY, getFilterConfig, DEFAULT_MIN_INCLUDE_MATCHES } from "@/lib/filters/skills";
 import type { KeywordFilterConfig } from "@/lib/filters/keyword-filter";
 import { scoreTextAgainstKeywords } from "@/lib/filters/keyword-filter";
 
@@ -70,13 +70,10 @@ export default function MiniAppPage() {
   const [logsLoading, setLogsLoading] = useState(false);
   const [activePlatform, setActivePlatform] = useState<string | null>(null);
   const [activeFolder, setActiveFolder] = useState<"all" | "favorites" | "urgent">("all");
-  const [keywordFilter, setKeywordFilter] = useState<KeywordFilterConfig>(() => {
+  const filterConfig = useMemo((): KeywordFilterConfig => {
     const def = getFilterConfig();
-    return { include: def.skills, exclude: def.excludeKeywords, minIncludeMatches: 1 };
-  });
-  const [includeDraft, setIncludeDraft] = useState("");
-  const [excludeDraft, setExcludeDraft] = useState("");
-  const [minMatches, setMinMatches] = useState<number>(1);
+    return { include: def.skills, exclude: def.excludeKeywords, minIncludeMatches: def.minIncludeMatches ?? DEFAULT_MIN_INCLUDE_MATCHES };
+  }, []);
   const [favorites, setFavorites] = useState<Record<string, "favorites" | "urgent">>({});
   const [viewMode, setViewMode] = useState<"orders" | "customers">("orders");
   const [search, setSearch] = useState("");
@@ -89,10 +86,7 @@ export default function MiniAppPage() {
     : orders;
   const baseByPlatform = activePlatform ? byPlatform.filter((o) => o.platform === activePlatform) : byPlatform;
   const filteredOrders = baseByPlatform.filter((o) => {
-    const res = scoreTextAgainstKeywords(`${o.title} ${o.description || ""}`, {
-      ...keywordFilter,
-      minIncludeMatches: minMatches,
-    });
+    const res = scoreTextAgainstKeywords(`${o.title} ${o.description || ""}`, filterConfig);
     return res.matches;
   });
   const folderOrders =
@@ -231,9 +225,7 @@ export default function MiniAppPage() {
       const res = await fetch("/api/parse", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          keywordFilter: { ...keywordFilter, minIncludeMatches: minMatches },
-        }),
+        body: JSON.stringify({ keywordFilter: filterConfig }),
       });
       setParseProgress(50);
       const data = await res.json();
@@ -299,31 +291,12 @@ export default function MiniAppPage() {
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem("wg_keywordFilter");
-      if (raw) {
-        const parsed = JSON.parse(raw) as { keywordFilter?: KeywordFilterConfig; minMatches?: number };
-        if (parsed.keywordFilter?.include && parsed.keywordFilter?.exclude) {
-          setKeywordFilter(parsed.keywordFilter);
-          setMinMatches(parsed.minMatches ?? parsed.keywordFilter.minIncludeMatches ?? 1);
-        }
-      }
       const favRaw = localStorage.getItem("wg_favorites");
       if (favRaw) setFavorites(JSON.parse(favRaw));
     } catch {
       // ignore
     }
   }, []);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        "wg_keywordFilter",
-        JSON.stringify({ keywordFilter, minMatches })
-      );
-    } catch {
-      // ignore
-    }
-  }, [keywordFilter, minMatches]);
 
   useEffect(() => {
     try {
@@ -384,82 +357,6 @@ export default function MiniAppPage() {
           >
             {parseLoading ? "Запуск парсеров..." : "Запустить парсеры"}
           </button>
-
-          <section className="mb-6">
-            <h2 className="text-sm font-medium text-gray-400 mb-2">Фильтры админа</h2>
-            <div className="bg-white/5 rounded-xl p-4 border border-white/10 space-y-3">
-              <div className="text-xs text-gray-400">
-                Include (через запятую) — например: <span className="text-amber-300">react, next.js, python</span>
-              </div>
-              <input
-                value={includeDraft}
-                onChange={(e) => setIncludeDraft(e.target.value)}
-                placeholder="react, next.js, python"
-                className="w-full rounded-lg bg-black/20 border border-white/10 px-3 py-2 text-sm outline-none focus:border-amber-500/40"
-              />
-              <div className="text-xs text-gray-400">
-                Exclude (через запятую) — например: <span className="text-amber-300">wb, ozon, маркетплейс, дизайн</span>
-              </div>
-              <input
-                value={excludeDraft}
-                onChange={(e) => setExcludeDraft(e.target.value)}
-                placeholder="wb, ozon, маркетплейс, дизайн"
-                className="w-full rounded-lg bg-black/20 border border-white/10 px-3 py-2 text-sm outline-none focus:border-amber-500/40"
-              />
-              <div className="flex items-center justify-between gap-3">
-                <div className="text-xs text-gray-400">Мин. совпадений include</div>
-                <select
-                  value={String(minMatches)}
-                  onChange={(e) => setMinMatches(parseInt(e.target.value, 10))}
-                  className="rounded-lg bg-black/20 border border-white/10 px-3 py-2 text-sm outline-none focus:border-amber-500/40"
-                >
-                  {[1, 2, 3].map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  className="flex-1 py-2 rounded-lg bg-amber-500/90 text-black text-sm font-semibold"
-                  onClick={() => {
-                    const include = includeDraft
-                      .split(",")
-                      .map((s) => s.trim())
-                      .filter(Boolean);
-                    const exclude = excludeDraft
-                      .split(",")
-                      .map((s) => s.trim())
-                      .filter(Boolean);
-                    setKeywordFilter((prev) => ({
-                      ...prev,
-                      include: include.length ? include : prev.include,
-                      exclude: exclude.length ? exclude : prev.exclude,
-                    }));
-                    setIncludeDraft("");
-                    setExcludeDraft("");
-                  }}
-                >
-                  Применить
-                </button>
-                <button
-                  type="button"
-                  className="px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-sm"
-                  onClick={() => {
-                    const def = getFilterConfig();
-                    setKeywordFilter({ include: def.skills, exclude: def.excludeKeywords, minIncludeMatches: 1 });
-                    setMinMatches(1);
-                    setIncludeDraft("");
-                    setExcludeDraft("");
-                  }}
-                >
-                  Сброс
-                </button>
-              </div>
-            </div>
-          </section>
 
           {selectedAgent && GATHER_AGENT_IDS.includes(selectedAgent.id) && (
             <section className="mb-6">
@@ -525,7 +422,7 @@ export default function MiniAppPage() {
           {!selectedAgent && (
             <section className="mb-6">
               <div className="p-3 rounded-xl bg-white/5 border border-white/10">
-                <div className="text-xs text-gray-500 mb-1">Стек (показываются только релевантные):</div>
+                <div className="text-xs text-gray-500 mb-1">Строгий фильтр по стеку (мин. 2 совпадения):</div>
                 <div className="flex flex-wrap gap-1.5">
                   {STACK_DISPLAY.map((s) => (
                     <span

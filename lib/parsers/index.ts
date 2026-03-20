@@ -104,7 +104,7 @@ export async function runAllParsers(options: RunAllParsersOptions = {}): Promise
   const defaultCfg = getFilterConfig();
   const cfg: KeywordFilterConfig = options.keywordFilter
     ? options.keywordFilter
-    : { include: defaultCfg.skills, exclude: defaultCfg.excludeKeywords, minIncludeMatches: 1 };
+    : { include: defaultCfg.skills, exclude: defaultCfg.excludeKeywords, minIncludeMatches: defaultCfg.minIncludeMatches ?? 2 };
 
   for (const order of allOrders) {
     const { matches, score } = scoreTextAgainstKeywords(

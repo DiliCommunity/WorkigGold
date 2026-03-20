@@ -1,5 +1,6 @@
 /**
  * Фильтр заказов по стеку программиста.
+ * Строгий режим: только заказы, явно совпадающие с навыками.
  * Настраивается в env FILTER_SKILLS (через запятую) или здесь по умолчанию.
  */
 
@@ -11,52 +12,54 @@ export const STACK_DISPLAY = [
   "Node.js",
   "Python",
   "API",
-  "Web",
+  "PostgreSQL",
   "Telegram-боты",
 ];
 
+// Ядро стека — только то, что реально делаешь (Full-Stack, React, Node, боты)
 const DEFAULT_SKILLS = [
   "javascript",
   "typescript",
   "react",
   "next.js",
   "nextjs",
-  "node",
   "node.js",
+  "node ",
   "python",
-  "api",
+  "rest api",
+  "api ",
   "frontend",
   "backend",
   "fullstack",
   "full-stack",
+  "full stack",
   "fastapi",
   "aiogram",
-  "telegram-бот",
   "telegram bot",
-  "бот",
-  "telegram",
-  "sql",
+  "telegram-бот",
+  "telegram бот",
+  "telegram бота",
   "postgresql",
-  "postgre",
-  "mysql",
-  "mongodb",
-  "redis",
+  "postgres",
   "prisma",
   "tailwind",
-  "docker",
-  "kubernetes",
-  "k8s",
-  "aws",
-  "gcp",
-  "grpc",
+  "веб-приложен",
+  "веб приложен",
+  "разработка сайт",
+  "разработка веб",
+  "landing",
+  "лендинг",
+  "парсер",
+  "скрипт",
+  "бот ",
 ];
 
 const EXCLUDE_KEYWORDS = [
   // Дизайн / 3D / визуал
   "autocad",
   "3d графика",
-  "3d моделирование",
-  "визуализация",
+  "3d моделирован",
+  "визуализаци",
   "архитектур",
   "чертёж",
   "дизайн интерьера",
@@ -69,7 +72,7 @@ const EXCLUDE_KEYWORDS = [
   "монтаж видео",
   "озвучка",
 
-  // Тексты / реклама
+  // Тексты / реклама / маркетинг
   "перевод текста",
   "копирайтинг",
   "рерайтинг",
@@ -79,8 +82,13 @@ const EXCLUDE_KEYWORDS = [
   "реклама и маркетинг",
   "таргетолог",
   "smm",
+  "продвижение услуг",
+  "банкротств",
+  "лидогенерац",
+  "публикация объявлений",
+  "разместить объявлени",
 
-  // Продажи / офлайн-бизнес
+  // Продажи / офлайн
   "архитектор",
   "авитолог",
   "автосалон",
@@ -91,13 +99,24 @@ const EXCLUDE_KEYWORDS = [
   "powerpoint",
   "презентация",
 
-  // Строительство / сметы
+  // Строительство / сметы / инженерия
   "смета",
   "сметчик",
   "составить смету",
   "строительн",
   "ремонт квартиры",
   "ремонт дома",
+  "вентиляци",
+  "сити-ферм",
+  "сити ферм",
+  "маршрутные карты",
+  "технологический процесс",
+  "насос",
+  "инженери",
+  "проектировщик",
+  "автокад",
+  "loginom",
+  "логином",
 
   // 1C / CRM / Bitrix
   "1с",
@@ -110,7 +129,7 @@ const EXCLUDE_KEYWORDS = [
   "crm-система",
   "crm система",
 
-  // Маркетплейсы / карточки товаров / контент-менеджмент
+  // Маркетплейсы / карточки товаров
   "wildberries",
   "wb",
   "вайлдберриз",
@@ -121,12 +140,11 @@ const EXCLUDE_KEYWORDS = [
   "маркетплейс",
   "карточки товара",
   "карточка товара",
-  "seo-оптимизация карточек",
   "заполнять карточки",
   "контент-менеджер",
   "контент менеджер",
 
-  // CMS / конструктора (часто не по профилю)
+  // CMS / конструктора
   "drupal",
   "друпал",
   "wordpress",
@@ -153,9 +171,13 @@ export function matchesProgrammerStack(title: string, description: string): bool
   return hasSkill && !hasExcluded;
 }
 
+/** Минимум совпадений include, чтобы заказ прошёл (строгий режим) */
+export const DEFAULT_MIN_INCLUDE_MATCHES = 2;
+
 export function getFilterConfig() {
   return {
     skills: getSkillKeywords(),
     excludeKeywords: EXCLUDE_KEYWORDS,
+    minIncludeMatches: DEFAULT_MIN_INCLUDE_MATCHES,
   };
 }
