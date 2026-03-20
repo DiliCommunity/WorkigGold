@@ -6,13 +6,11 @@ import type { KeywordFilterConfig } from "@/lib/filters/keyword-filter";
 import { scoreTextAgainstKeywords } from "@/lib/filters/keyword-filter";
 import { parseFLru } from "./fl-ru";
 import { parseFreelanceRu } from "./freelance-ru";
-import { parseWeblancer } from "./weblancer";
 import { parseGuru } from "./guru";
 import type { ParsedOrder } from "./types";
 
 export { parseFLru } from "./fl-ru";
 export { parseFreelanceRu } from "./freelance-ru";
-export { parseWeblancer } from "./weblancer";
 export { parseGuru } from "./guru";
 
 export interface RunAllResult {
@@ -76,30 +74,27 @@ export async function runAllParsers(options: RunAllParsersOptions = {}): Promise
     agentId: dispatcher.id,
     action: "Запуск всех парсеров",
     status: "info",
-    details: "Фл-Разведчик, Фрилансру-Сканёр, Веблансер-Сканёр, Гуру-Сканёр",
+    details: "Фл-Разведчик, Фрилансру-Сканёр, Гуру-Сканёр",
   });
 
-  // FL.ru, Freelance.ru, Weblancer, Guru — 4 биржи, минимум 3 работают
-  const [fl, freelanceRu, weblancer, guru] = await Promise.all([
+  // FL.ru, Freelance.ru, Guru — 3 биржи
+  const [fl, freelanceRu, guru] = await Promise.all([
     parseFLru(),
     parseFreelanceRu(),
-    parseWeblancer(),
     parseGuru(),
   ]);
 
   if (fl.error) errors.push(`FL.ru: ${fl.error}`);
   if (freelanceRu.error) errors.push(`Freelance.ru: ${freelanceRu.error}`);
-  if (weblancer.error) errors.push(`Weblancer: ${weblancer.error}`);
   if (guru.error) errors.push(`Guru: ${guru.error}`);
 
   byPlatform[fl.platform] = fl.count;
   byPlatform[freelanceRu.platform] = freelanceRu.count;
-  byPlatform[weblancer.platform] = weblancer.count;
   byPlatform[guru.platform] = guru.count;
 
   let saved = 0;
   let filtered = 0;
-  const allOrders = [...fl.orders, ...freelanceRu.orders, ...weblancer.orders, ...guru.orders];
+  const allOrders = [...fl.orders, ...freelanceRu.orders, ...guru.orders];
 
   const defaultCfg = getFilterConfig();
   const cfg: KeywordFilterConfig = options.keywordFilter
@@ -126,7 +121,7 @@ export async function runAllParsers(options: RunAllParsersOptions = {}): Promise
   }
 
   const duration = Date.now() - start;
-  const total = fl.count + freelanceRu.count + weblancer.count + guru.count;
+  const total = fl.count + freelanceRu.count + guru.count;
 
   await sendAgentLogToTelegram({
     agentName: dispatcher.name,
@@ -135,7 +130,7 @@ export async function runAllParsers(options: RunAllParsersOptions = {}): Promise
     status: errors.length > 0 ? "info" : "success",
     count: total,
     durationMs: duration,
-    details: `FL: ${fl.count}, Freelance.ru: ${freelanceRu.count}, Weblancer: ${weblancer.count}, Guru: ${guru.count}. По стеку: ${saved} новых, отфильтровано: ${filtered}`,
+    details: `FL: ${fl.count}, Freelance.ru: ${freelanceRu.count}, Guru: ${guru.count}. По стеку: ${saved} новых, отфильтровано: ${filtered}`,
     error: errors.length ? errors.slice(0, 3).join("; ") : undefined,
   });
 

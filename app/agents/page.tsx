@@ -23,9 +23,8 @@ interface ChatMessage {
 
 const INITIAL_AGENTS: Agent[] = [
   { id: "fl", name: "Фл-Разведчик", role: "gather", platform: "FL.ru", task: "Сканирует FL.ru" },
-  { id: "kwork", name: "Кворк-Сборщик", role: "gather", platform: "Kwork", task: "Собирает заказы Kwork" },
-  { id: "habr", name: "Хабр-Дозорный", role: "gather", platform: "Habr", task: "Мониторит Habr" },
-  { id: "weblancer", name: "Веблансер-Сканёр", role: "gather", platform: "Weblancer", task: "Сканирует Weblancer" },
+  { id: "freelance-ru", name: "Фрилансру-Сканёр", role: "gather", platform: "Freelance.ru", task: "Сканирует Freelance.ru" },
+  { id: "guru", name: "Гуру-Сканёр", role: "gather", platform: "Guru", task: "Сканирует Guru" },
   { id: "filter", name: "Просеиватель", role: "analyze", platform: "", task: "Фильтрация по критериям" },
   { id: "scorer", name: "Оценщик", role: "analyze", platform: "", task: "Оценка релевантности" },
   { id: "sorter", name: "Сортировщик", role: "analyze", platform: "", task: "Сортировка по приоритету" },
@@ -49,7 +48,7 @@ const ROLE_STYLES: Record<Role, string> = {
 export default function AgentsPage() {
   const [agents, setAgents] = useState<Agent[]>(INITIAL_AGENTS);
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
-  const [gatherCount, setGatherCount] = useState(4);
+  const [gatherCount, setGatherCount] = useState(3);
   const [analyzeCount, setAnalyzeCount] = useState(2);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     { role: "bot", text: "Привет! Я Прораб. Напиши, какую задачу поставить агентам: усилить сбор с бирж или анализ заказов." },
@@ -113,7 +112,7 @@ export default function AgentsPage() {
                 <input
                   type="range"
                   min={1}
-                  max={4}
+                  max={3}
                   value={gatherCount}
                   onChange={(e) => setGatherCount(Number(e.target.value))}
                   className="w-full accent-primary"

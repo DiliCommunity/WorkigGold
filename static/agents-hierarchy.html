@@ -95,8 +95,8 @@
       <h3>Настройка ролей</h3>
       <div class="slider-row">
         <label>На сбор информации</label>
-        <input type="range" id="gatherCount" min="1" max="4" value="4">
-        <span id="gatherVal">4</span>
+        <input type="range" id="gatherCount" min="1" max="3" value="3">
+        <span id="gatherVal">3</span>
       </div>
       <div class="slider-row">
         <label>На анализ</label>
@@ -134,9 +134,8 @@
           <div style="height:24px;"></div>
           <div class="row-agents" id="agentRow">
             <div class="node gather" data-id="fl" data-role="gather">Фл-Разведчик<br><span class="role-tag">Сбор • FL.ru</span></div>
-            <div class="node gather" data-id="kwork" data-role="gather">Кворк-Сборщик<br><span class="role-tag">Сбор • Kwork</span></div>
-            <div class="node gather" data-id="habr" data-role="gather">Хабр-Дозорный<br><span class="role-tag">Сбор • Habr</span></div>
-            <div class="node gather" data-id="weblancer" data-role="gather">Веблансер-Сканёр<br><span class="role-tag">Сбор • Weblancer</span></div>
+            <div class="node gather" data-id="freelance-ru" data-role="gather">Фрилансру-Сканёр<br><span class="role-tag">Сбор • Freelance.ru</span></div>
+            <div class="node gather" data-id="guru" data-role="gather">Гуру-Сканёр<br><span class="role-tag">Сбор • Guru</span></div>
             <div class="node analyze" data-id="filter" data-role="analyze" data-analyze-index="0">Просеиватель<br><span class="role-tag">Фильтрация</span></div>
             <div class="node analyze" data-id="scorer" data-role="analyze" data-analyze-index="1">Оценщик<br><span class="role-tag">Релевантность</span></div>
             <div class="node analyze" data-id="sorter" data-role="analyze" data-analyze-index="2">Сортировщик<br><span class="role-tag">Приоритеты</span></div>
@@ -199,9 +198,8 @@
   <script>
     const agentData = {
       fl: { name: 'Фл-Разведчик', platform: 'FL.ru', role: 'gather', task: 'Сканирует FL.ru', filters: [] },
-      kwork: { name: 'Кворк-Сборщик', platform: 'Kwork', role: 'gather', task: 'Собирает заказы Kwork', filters: [] },
-      habr: { name: 'Хабр-Дозорный', platform: 'Habr', role: 'gather', task: 'Мониторит Habr', filters: [] },
-      weblancer: { name: 'Веблансер-Сканёр', platform: 'Weblancer', role: 'gather', task: 'Сканирует Weblancer', filters: [] },
+      'freelance-ru': { name: 'Фрилансру-Сканёр', platform: 'Freelance.ru', role: 'gather', task: 'Сканирует Freelance.ru', filters: [] },
+      guru: { name: 'Гуру-Сканёр', platform: 'Guru', role: 'gather', task: 'Сканирует Guru', filters: [] },
       filter: { name: 'Просеиватель', platform: '', role: 'analyze', task: 'Фильтрация по критериям', filters: [] },
       scorer: { name: 'Оценщик', platform: '', role: 'analyze', task: 'Оценка релевантности', filters: [] },
       sorter: { name: 'Сортировщик', platform: '', role: 'analyze', task: 'Сортировка по приоритету', filters: [] },
@@ -279,7 +277,7 @@
     function updateRoles() {
       const gatherCount = +gatherSlider.value;
       const analyzeCount = +analyzeSlider.value;
-      const gatherers = ['fl','kwork','habr','weblancer'];
+      const gatherers = ['fl','freelance-ru','guru'];
       const analyzeOrder = ['filter','scorer','sorter'];
       document.querySelectorAll('#agentRow [data-id]').forEach(el => {
         const id = el.dataset.id;

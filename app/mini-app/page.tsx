@@ -820,7 +820,7 @@ export default function MiniAppPage() {
                 {parseLoading && (
                   <div className="mt-2 flex items-center gap-2 text-[11px] text-gray-400">
                     <span className="inline-flex h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
-                    <span>Парсим FL.ru, Freelance.ru, Weblancer и Guru…</span>
+                    <span>Парсим FL.ru, Freelance.ru и Guru…</span>
                   </div>
                 )}
               </div>

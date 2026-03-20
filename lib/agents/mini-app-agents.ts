@@ -20,10 +20,9 @@ export const MINI_APP_AGENTS: MiniAppAgent[] = [
     platformFilter: "Freelance.ru",
     description: "Сканирует freelance.ru",
   },
-  { id: "weblancer-skaner", name: "Веблансер-Сканёр", platform: "Weblancer", platformFilter: "Weblancer", description: "Сканирует Weblancer" },
   { id: "guru-skaner", name: "Гуру-Сканёр", platform: "Guru", platformFilter: "Guru", description: "Сканирует guru.com" },
   { id: "dispatcher", name: "Диспетчер", platform: "Все", platformFilter: null, description: "Все платформы" },
   { id: "vestnik", name: "Вестник", platform: "Уведомления", platformFilter: null, description: "Уведомления в бот" },
 ];
 
-export const GATHER_AGENT_IDS = ["fl-razvedchik", "freelance-ru-skaner", "weblancer-skaner", "guru-skaner"];
+export const GATHER_AGENT_IDS = ["fl-razvedchik", "freelance-ru-skaner", "guru-skaner"];

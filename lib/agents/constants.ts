@@ -32,13 +32,6 @@ export const AGENTS = {
     description: "Сканирует проекты на freelance.ru",
     platform: "Freelance.ru",
   },
-  /** Weblancer — парсер */
-  WEBLANCER_SKANER: {
-    id: "weblancer-skaner",
-    name: "Веблансер-Сканёр",
-    description: "Сканирует заказы на Weblancer",
-    platform: "Weblancer",
-  },
   /** Guru — парсер */
   GURU_SKANER: {
     id: "guru-skaner",
