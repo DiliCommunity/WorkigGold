@@ -59,8 +59,8 @@ export async function parseFreelanceRu(): Promise<ParserResult> {
       const html = await res.text();
       const $ = cheerio.load(html);
 
-      // Проекты: ссылки вида /projects/<slug>-<id>.html
-      $("a[href^='/projects/'][href$='.html']").each((_, el) => {
+      // Проекты: ссылки вида /projects/<slug>-<id>.html (относительные или абсолютные)
+      $("a[href*='/projects/'][href*='.html']").each((_, el) => {
         const $a = $(el);
         const href = ($a.attr("href") || "").trim();
         if (!href) return;

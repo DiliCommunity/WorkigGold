@@ -18,8 +18,8 @@ function parseBudget(text: string): { value?: number; currency: string } {
 }
 
 function extractIdFromHref(href: string): string | undefined {
-  // Пример: /jobs/some-slug/2116846
-  const m = href.match(/\/jobs\/[^/]+\/(\d+)(?:\/|$)/i);
+  // Guru: /jobs/some-slug/2116846 или .../2116944&SearchUrl=...
+  const m = href.match(/\/jobs\/[^/]+\/(\d+)(?:\/|&|\?|$)/i);
   return m?.[1];
 }
 
@@ -53,7 +53,7 @@ export async function parseGuru(): Promise<ParserResult> {
       const html = await res.text();
       const $ = cheerio.load(html);
 
-      $("a[href^='/jobs/']").each((_, el) => {
+      $("a[href*='/jobs/']").each((_, el) => {
         const $a = $(el);
         const href = ($a.attr("href") || "").trim();
         const id = extractIdFromHref(href);
@@ -70,7 +70,7 @@ export async function parseGuru(): Promise<ParserResult> {
         const budgetText = block.text();
         const { value: budget, currency } = parseBudget(budgetText);
 
-        const urlFull = href.startsWith("http") ? href : `https://www.guru.com${href}`;
+        const urlFull = (href.startsWith("http") ? href.split("&")[0] : `https://www.guru.com${href.split("&")[0]}`).replace(/\?$/, "");
 
         seen.add(id);
         orders.push({

@@ -32,6 +32,13 @@ export const AGENTS = {
     description: "Сканирует проекты на freelance.ru",
     platform: "Freelance.ru",
   },
+  /** Habr Freelance — парсер (до закрытия платформы) */
+  HABR_SKANER: {
+    id: "habr-skaner",
+    name: "Хабр-Сканёр",
+    description: "Сканирует заказы на freelance.habr.com",
+    platform: "Habr Freelance",
+  },
   /** Guru — парсер */
   GURU_SKANER: {
     id: "guru-skaner",

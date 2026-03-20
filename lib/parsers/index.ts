@@ -7,11 +7,13 @@ import { scoreTextAgainstKeywords } from "@/lib/filters/keyword-filter";
 import { parseFLru } from "./fl-ru";
 import { parseFreelanceRu } from "./freelance-ru";
 import { parseGuru } from "./guru";
+import { parseKwork } from "./kwork";
 import type { ParsedOrder } from "./types";
 
 export { parseFLru } from "./fl-ru";
 export { parseFreelanceRu } from "./freelance-ru";
 export { parseGuru } from "./guru";
+export { parseKwork } from "./kwork";
 
 export interface RunAllResult {
   total: number;
@@ -74,27 +76,33 @@ export async function runAllParsers(options: RunAllParsersOptions = {}): Promise
     agentId: dispatcher.id,
     action: "Запуск всех парсеров",
     status: "info",
-    details: "Фл-Разведчик, Фрилансру-Сканёр, Гуру-Сканёр",
+    details: "Фл-Разведчик, Фрилансру-Сканёр, Кворк-Сборщик, Хабр-Сканёр, Гуру-Сканёр",
   });
 
-  // FL.ru, Freelance.ru, Guru — 3 биржи
-  const [fl, freelanceRu, guru] = await Promise.all([
+  // FL.ru, Freelance.ru, Kwork, Habr Freelance, Guru — 5 бирж
+  const [fl, freelanceRu, kwork, habr, guru] = await Promise.all([
     parseFLru(),
     parseFreelanceRu(),
+    parseKwork(),
+    parseHabrFreelance(),
     parseGuru(),
   ]);
 
   if (fl.error) errors.push(`FL.ru: ${fl.error}`);
   if (freelanceRu.error) errors.push(`Freelance.ru: ${freelanceRu.error}`);
+  if (kwork.error) errors.push(`Kwork: ${kwork.error}`);
+  if (habr.error) errors.push(`Habr: ${habr.error}`);
   if (guru.error) errors.push(`Guru: ${guru.error}`);
 
   byPlatform[fl.platform] = fl.count;
   byPlatform[freelanceRu.platform] = freelanceRu.count;
+  byPlatform[kwork.platform] = kwork.count;
+  byPlatform[habr.platform] = habr.count;
   byPlatform[guru.platform] = guru.count;
 
   let saved = 0;
   let filtered = 0;
-  const allOrders = [...fl.orders, ...freelanceRu.orders, ...guru.orders];
+  const allOrders = [...fl.orders, ...freelanceRu.orders, ...kwork.orders, ...habr.orders, ...guru.orders];
 
   const defaultCfg = getFilterConfig();
   const cfg: KeywordFilterConfig = options.keywordFilter
@@ -121,7 +129,7 @@ export async function runAllParsers(options: RunAllParsersOptions = {}): Promise
   }
 
   const duration = Date.now() - start;
-  const total = fl.count + freelanceRu.count + guru.count;
+  const total = fl.count + freelanceRu.count + kwork.count + habr.count + guru.count;
 
   await sendAgentLogToTelegram({
     agentName: dispatcher.name,
@@ -130,7 +138,7 @@ export async function runAllParsers(options: RunAllParsersOptions = {}): Promise
     status: errors.length > 0 ? "info" : "success",
     count: total,
     durationMs: duration,
-    details: `FL: ${fl.count}, Freelance.ru: ${freelanceRu.count}, Guru: ${guru.count}. По стеку: ${saved} новых, отфильтровано: ${filtered}`,
+    details: `FL: ${fl.count}, Freelance.ru: ${freelanceRu.count}, Kwork: ${kwork.count}, Habr: ${habr.count}, Guru: ${guru.count}. По стеку: ${saved} новых, отфильтровано: ${filtered}`,
     error: errors.length ? errors.slice(0, 3).join("; ") : undefined,
   });
 
