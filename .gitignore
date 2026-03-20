@@ -39,3 +39,6 @@ prisma/migrations
 # exclude from repo
 *.md
 *.sql
+
+# Cursor IDE — локальные настройки, не для GitHub и деплоя
+.cursor/

@@ -1,0 +1,5 @@
+# Не деплоить на Vercel
+.cursor
+.env
+.env.*
+!.env.example
