@@ -1,12 +1,14 @@
 import { prisma } from "@/lib/prisma";
+import { SUPPORTED_PLATFORMS } from "@/lib/constants/platforms";
 import { OrdersClient } from "./OrdersClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function OrdersPage() {
   const orders = await prisma.freelanceOrder.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 50,
+    where: { platform: { in: [...SUPPORTED_PLATFORMS] } },
+    orderBy: [{ postedAt: "desc" }, { createdAt: "desc" }],
+    take: 200,
   });
 
   return (
@@ -24,6 +26,7 @@ export default async function OrdersPage() {
         filterScore: order.filterScore,
         url: order.url,
         createdAt: order.createdAt.toISOString(),
+        postedAt: order.postedAt?.toISOString() ?? null,
       }))}
     />
   );

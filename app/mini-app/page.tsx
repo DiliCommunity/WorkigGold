@@ -7,6 +7,7 @@ import { X, ExternalLink, ChevronRight, Activity, ArrowLeft, Star, AlertTriangle
 import { iconBtn } from "@/components/OrderCard";
 import { cn } from "@/lib/utils";
 import { MINI_APP_AGENTS, GATHER_AGENT_IDS, type MiniAppAgent } from "@/lib/agents/mini-app-agents";
+import { SUPPORTED_PLATFORMS } from "@/lib/constants/platforms";
 import { STACK_DISPLAY, getFilterConfig, DEFAULT_MIN_INCLUDE_MATCHES } from "@/lib/filters/skills";
 import type { KeywordFilterConfig } from "@/lib/filters/keyword-filter";
 import { scoreTextAgainstKeywords } from "@/lib/filters/keyword-filter";
@@ -21,6 +22,7 @@ interface Order {
   status: string;
   url: string | null;
   createdAt: string;
+  postedAt?: string | null;
 }
 
 interface AgentLog {
@@ -103,7 +105,11 @@ export default function MiniAppPage() {
   const sortedOrders = useMemo(() => {
     const arr = [...searchedOrders];
     if (sort === "newest") {
-      arr.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+      arr.sort((a, b) => {
+        const aDate = a.postedAt ?? a.createdAt;
+        const bDate = b.postedAt ?? b.createdAt;
+        return +new Date(bDate) - +new Date(aDate);
+      });
     } else if (sort === "budgetDesc") {
       arr.sort((a, b) => (b.budget ?? -1) - (a.budget ?? -1));
     } else if (sort === "budgetAsc") {
@@ -129,15 +135,16 @@ export default function MiniAppPage() {
 
   const byPlatformCounts = useMemo(() => {
     const m: Record<string, number> = {};
+    const supported = new Set(SUPPORTED_PLATFORMS);
     for (const o of orders) {
-      m[o.platform] = (m[o.platform] || 0) + 1;
+      if (supported.has(o.platform)) m[o.platform] = (m[o.platform] || 0) + 1;
     }
     return m;
   }, [orders]);
 
   const fetchOrders = async () => {
     try {
-      const params = new URLSearchParams({ limit: "100" });
+      const params = new URLSearchParams({ limit: "200" });
       if (platformFilter) params.set("platform", platformFilter);
       const res = await fetch(`/api/orders?${params}`);
       if (res.ok) {
@@ -632,6 +639,15 @@ export default function MiniAppPage() {
                         <span className="px-2 py-0.5 rounded-md bg-white/10 text-gray-400">
                           {o.platform}
                         </span>
+                        {o.postedAt && (
+                          <span className="text-gray-500">
+                            {new Date(o.postedAt).toLocaleDateString("ru-RU", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </span>
+                        )}
                         {o.budget != null && (
                           <span className="font-medium text-gray-400">
                             {o.budget} {o.currency}

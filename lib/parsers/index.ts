@@ -54,6 +54,7 @@ async function saveOrder(order: ParsedOrder, meta: SaveMeta): Promise<boolean> {
       clientName: order.clientName ?? null,
       skills: [],
       url: order.url,
+      postedAt: order.postedAt ?? undefined,
       status: (meta.status as any) ?? undefined,
       filterScore: meta.filterScore ?? undefined,
       rawData: order.rawData as object,
@@ -108,7 +109,7 @@ export async function runAllParsers(options: RunAllParsersOptions = {}): Promise
   const defaultCfg = getFilterConfig();
   const cfg: KeywordFilterConfig = options.keywordFilter
     ? options.keywordFilter
-    : { include: defaultCfg.skills, exclude: defaultCfg.excludeKeywords, minIncludeMatches: defaultCfg.minIncludeMatches ?? 2 };
+    : { include: defaultCfg.skills, exclude: defaultCfg.excludeKeywords, minIncludeMatches: defaultCfg.minIncludeMatches ?? 1 };
 
   for (const order of allOrders) {
     const { matches, score } = scoreTextAgainstKeywords(

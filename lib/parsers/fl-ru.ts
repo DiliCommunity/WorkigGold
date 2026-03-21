@@ -1,6 +1,7 @@
 import * as cheerio from "cheerio";
 import { AGENTS } from "@/lib/agents/constants";
 import { sendAgentLogToTelegram } from "@/lib/telegram-logger";
+import { parsePostedDate } from "./parse-date";
 import type { ParserResult, ParsedOrder } from "./types";
 
 const FL_URL = "https://www.fl.ru/projects/";
@@ -73,6 +74,12 @@ export async function parseFLru(): Promise<ParserResult> {
       const budgetText = block.text();
       const { value: budget, currency } = parseBudget(budgetText);
 
+      // FL.ru: дата в time[datetime], или текст "ДД.ММ.ГГГГ"
+      const $time = block.find("time[datetime]");
+      const dateAttr = $time.attr("datetime");
+      const dateText = block.find(".b-post__time, [class*='time'], [class*='date']").first().text().trim() || budgetText;
+      const postedAt = parsePostedDate(dateText, dateAttr);
+
       const url = href.startsWith("http") ? href : `https://www.fl.ru${href}`;
       if (orders.some((o) => o.platformOrderId === id)) return;
 
@@ -85,6 +92,7 @@ export async function parseFLru(): Promise<ParserResult> {
         currency,
         clientName,
         url,
+        postedAt: postedAt ?? undefined,
         rawData: { rawTitle: title, clientName },
       });
     });

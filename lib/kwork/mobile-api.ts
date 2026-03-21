@@ -117,6 +117,7 @@ export function mapKworkProjectToOrder(p: KworkProjectRaw): {
   budget?: number;
   currency: string;
   url: string;
+  postedAt?: Date | null;
 } | null {
   const id =
     String(p.id ?? p.project_id ?? p.PID ?? "");
@@ -145,7 +146,15 @@ export function mapKworkProjectToOrder(p: KworkProjectRaw): {
   else if (typeof urlPath === "string" && urlPath.startsWith("/")) url = `https://kwork.ru${urlPath}`;
   else url = `https://kwork.ru/projects/${id}/view`;
 
-  return { id, title, description, budget, currency, url };
+  // Kwork API: created_at, date, publish_date, published_at (ISO или timestamp)
+  let postedAt: Date | undefined;
+  const dateVal = p.created_at ?? p.date ?? p.publish_date ?? p.published_at;
+  if (typeof dateVal === "string" || typeof dateVal === "number") {
+    const d = new Date(dateVal);
+    if (!isNaN(d.getTime())) postedAt = d;
+  }
+
+  return { id, title, description, budget, currency, url, postedAt };
 }
 
 export function getKworkCredentialsFromEnv(): {

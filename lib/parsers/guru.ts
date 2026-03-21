@@ -1,6 +1,7 @@
 import * as cheerio from "cheerio";
 import { AGENTS } from "@/lib/agents/constants";
 import { sendAgentLogToTelegram } from "@/lib/telegram-logger";
+import { parsePostedDate } from "./parse-date";
 import type { ParserResult, ParsedOrder } from "./types";
 
 const GURU_URL = "https://www.guru.com/d/jobs/";
@@ -70,6 +71,11 @@ export async function parseGuru(): Promise<ParserResult> {
         const budgetText = block.text();
         const { value: budget, currency } = parseBudget(budgetText);
 
+        const $time = block.find("time[datetime]");
+        const dateAttr = $time.attr("datetime");
+        const dateText = block.find("[class*='time'], [class*='date']").first().text().trim() || budgetText;
+        const postedAt = parsePostedDate(dateText, dateAttr);
+
         const urlFull = (href.startsWith("http") ? href.split("&")[0] : `https://www.guru.com${href.split("&")[0]}`).replace(/\?$/, "");
 
         seen.add(id);
@@ -81,6 +87,7 @@ export async function parseGuru(): Promise<ParserResult> {
           budget,
           currency,
           url: urlFull,
+          postedAt: postedAt ?? undefined,
           rawData: {},
         });
       });

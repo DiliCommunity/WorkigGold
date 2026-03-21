@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ExternalLink, Calendar, DollarSign } from "lucide-react";
+import { ExternalLink, Calendar, DollarSign, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const statusColors: Record<string, string> = {
@@ -23,7 +23,21 @@ export type UiOrder = {
   filterScore: number | null;
   url: string | null;
   createdAt: string | Date;
+  postedAt?: string | Date | null;
 };
+
+function formatPostedDate(val: string | Date | null | undefined): string | null {
+  if (!val) return null;
+  const d = new Date(val);
+  if (isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("ru-RU", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 const iconBtn =
   "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#141b26]";
@@ -77,6 +91,12 @@ export function OrderCard({
               <Calendar className="w-4 h-4 shrink-0" />
               {order.platform}
             </span>
+            {order.postedAt && (
+              <span className="flex items-center gap-1" title="Опубликовано заказчиком">
+                <Clock className="w-4 h-4 shrink-0" />
+                {formatPostedDate(order.postedAt)}
+              </span>
+            )}
             {order.clientName && <span className="truncate max-w-[200px]">{order.clientName}</span>}
           </div>
         </div>

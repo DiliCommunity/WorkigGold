@@ -1,6 +1,7 @@
 import { Briefcase, MessageSquare, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { SUPPORTED_PLATFORMS } from "@/lib/constants/platforms";
 import { OrderCard } from "@/components/OrderCard";
 
 export const dynamic = "force-dynamic";
@@ -8,26 +9,24 @@ export const dynamic = "force-dynamic";
 async function getDashboardData() {
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const platformFilter = { platform: { in: [...SUPPORTED_PLATFORMS] } };
 
   const [newOrdersCount, activeChatsCount, acceptedTodayCount, recentOrders] = await Promise.all([
-    // Новых/отфильтрованных заказов (найденные парсером)
     prisma.freelanceOrder.count({
-      where: { status: { in: ["NEW", "FILTERED"] } },
+      where: { ...platformFilter, status: { in: ["NEW", "FILTERED"] } },
     }),
-    // Активных чатов — заказы с хотя бы одним сообщением
     prisma.freelanceOrder.count({
-      where: { messages: { some: {} } },
+      where: { ...platformFilter, messages: { some: {} } },
     }),
-    // Принято сегодня — по StatusHistory или по orders с APPROVED и updatedAt сегодня
     prisma.statusHistory.count({
       where: {
         status: "APPROVED",
         createdAt: { gte: startOfToday },
       },
     }),
-    // Последние заказы (все найденные)
     prisma.freelanceOrder.findMany({
-      orderBy: { createdAt: "desc" },
+      where: platformFilter,
+      orderBy: [{ postedAt: "desc" }, { createdAt: "desc" }],
       take: 10,
     }),
   ]);
@@ -86,6 +85,7 @@ export default async function DashboardPage() {
     filterScore: order.filterScore,
     url: order.url,
     createdAt: order.createdAt.toISOString(),
+    postedAt: order.postedAt?.toISOString() ?? null,
   }));
 
   return (

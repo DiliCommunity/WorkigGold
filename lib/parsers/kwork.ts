@@ -59,6 +59,7 @@ export async function parseKwork(): Promise<ParserResult> {
         budget: m.budget,
         currency: m.currency,
         url: m.url,
+        postedAt: m.postedAt ?? undefined,
         rawData: raw as Record<string, unknown>,
       });
     }

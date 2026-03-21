@@ -25,6 +25,7 @@ const INITIAL_AGENTS: Agent[] = [
   { id: "fl", name: "Фл-Разведчик", role: "gather", platform: "FL.ru", task: "Сканирует FL.ru" },
   { id: "freelance-ru", name: "Фрилансру-Сканёр", role: "gather", platform: "Freelance.ru", task: "Сканирует Freelance.ru" },
   { id: "guru", name: "Гуру-Сканёр", role: "gather", platform: "Guru", task: "Сканирует Guru" },
+  { id: "kwork", name: "Кворк-Сборщик", role: "gather", platform: "Kwork", task: "Сканирует Kwork (KWORK_LOGIN/KWORK_PASSWORD)" },
   { id: "filter", name: "Просеиватель", role: "analyze", platform: "", task: "Фильтрация по критериям" },
   { id: "scorer", name: "Оценщик", role: "analyze", platform: "", task: "Оценка релевантности" },
   { id: "sorter", name: "Сортировщик", role: "analyze", platform: "", task: "Сортировка по приоритету" },

@@ -5,6 +5,7 @@ import { AlertTriangle, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { UiOrder } from "@/components/OrderCard";
 import { OrderCard, iconBtn } from "@/components/OrderCard";
+import { SUPPORTED_PLATFORMS } from "@/lib/constants/platforms";
 import { getFilterConfig } from "@/lib/filters/skills";
 import type { KeywordFilterConfig } from "@/lib/filters/keyword-filter";
 import { scoreTextAgainstKeywords } from "@/lib/filters/keyword-filter";
@@ -57,7 +58,11 @@ export function OrdersClient({ initialOrders }: { initialOrders: UiOrder[] }) {
 
   const byPlatformCounts = useMemo(() => {
     const map: Record<string, number> = {};
-    for (const o of orders) map[o.platform] = (map[o.platform] || 0) + 1;
+    for (const o of orders) {
+      if (SUPPORTED_PLATFORMS.includes(o.platform as (typeof SUPPORTED_PLATFORMS)[number])) {
+        map[o.platform] = (map[o.platform] || 0) + 1;
+      }
+    }
     return map;
   }, [orders]);
 
@@ -96,7 +101,11 @@ export function OrdersClient({ initialOrders }: { initialOrders: UiOrder[] }) {
   const sortedOrders = useMemo(() => {
     const arr = [...searchedOrders];
     if (sort === "newest") {
-      arr.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+      arr.sort((a, b) => {
+        const aDate = (a as UiOrder & { postedAt?: string | null }).postedAt ?? a.createdAt;
+        const bDate = (b as UiOrder & { postedAt?: string | null }).postedAt ?? b.createdAt;
+        return +new Date(bDate) - +new Date(aDate);
+      });
     } else if (sort === "budgetDesc") {
       arr.sort((a, b) => (b.budget ?? -1) - (a.budget ?? -1));
     } else if (sort === "budgetAsc") {

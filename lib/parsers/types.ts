@@ -7,6 +7,8 @@ export interface ParsedOrder {
   currency: string;
   clientName?: string | null;
   url?: string;
+  /** Дата публикации заказчиком на бирже */
+  postedAt?: Date | null;
   rawData?: Record<string, unknown>;
 }
 

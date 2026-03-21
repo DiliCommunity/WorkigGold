@@ -17,23 +17,24 @@ model User {
 }
 
 model FreelanceOrder {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   title           String
   description     String
   platform        String
   platformOrderId String?
   budget          Float?
-  currency        String   @default("USD")
+  currency        String    @default("USD")
   clientName      String?
   clientRating    Float?
   skills          String[]
   deadline        DateTime?
+  postedAt        DateTime? // дата публикации заказчиком на бирже
   url             String?
   status          OrderStatus @default(NEW)
   filterScore     Float?
   rawData         Json?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
   
   messages        Message[]
   statusHistory   StatusHistory[]
