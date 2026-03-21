@@ -183,8 +183,8 @@ export function matchesProgrammerStack(title: string, description: string): bool
   return hasSkill && !hasExcluded;
 }
 
-/** Минимум совпадений include, чтобы заказ прошёл (строгий режим) */
-export const DEFAULT_MIN_INCLUDE_MATCHES = 2;
+/** Минимум совпадений include, чтобы заказ прошёл (1 = мягче, 2 = строже) */
+export const DEFAULT_MIN_INCLUDE_MATCHES = 1;
 
 export function getFilterConfig() {
   return {

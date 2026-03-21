@@ -1,13 +1,93 @@
 import { Briefcase, MessageSquare, TrendingUp } from "lucide-react";
 import Link from "next/link";
+import { prisma } from "@/lib/prisma";
+import { OrderCard } from "@/components/OrderCard";
 
-const stats = [
-  { label: "Новых заказов", value: "12", icon: Briefcase, color: "text-primary" },
-  { label: "Активных чатов", value: "5", icon: MessageSquare, color: "text-secondary" },
-  { label: "Принято сегодня", value: "3", icon: TrendingUp, color: "text-accent-green" },
-];
+export const dynamic = "force-dynamic";
 
-export default function DashboardPage() {
+async function getDashboardData() {
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  const [newOrdersCount, activeChatsCount, acceptedTodayCount, recentOrders] = await Promise.all([
+    // Новых/отфильтрованных заказов (найденные парсером)
+    prisma.freelanceOrder.count({
+      where: { status: { in: ["NEW", "FILTERED"] } },
+    }),
+    // Активных чатов — заказы с хотя бы одним сообщением
+    prisma.freelanceOrder.count({
+      where: { messages: { some: {} } },
+    }),
+    // Принято сегодня — по StatusHistory или по orders с APPROVED и updatedAt сегодня
+    prisma.statusHistory.count({
+      where: {
+        status: "APPROVED",
+        createdAt: { gte: startOfToday },
+      },
+    }),
+    // Последние заказы (все найденные)
+    prisma.freelanceOrder.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    }),
+  ]);
+
+  // Если в StatusHistory нет записей, считаем по orders с APPROVED
+  let acceptedToday = acceptedTodayCount;
+  if (acceptedToday === 0) {
+    acceptedToday = await prisma.freelanceOrder.count({
+      where: {
+        status: "APPROVED",
+        updatedAt: { gte: startOfToday },
+      },
+    });
+  }
+
+  return {
+    newOrders: newOrdersCount,
+    activeChats: activeChatsCount,
+    acceptedToday,
+    recentOrders,
+  };
+}
+
+export default async function DashboardPage() {
+  let newOrders = 0;
+  let activeChats = 0;
+  let acceptedToday = 0;
+  let recentOrders: Awaited<ReturnType<typeof prisma.freelanceOrder.findMany>> = [];
+
+  try {
+    const data = await getDashboardData();
+    newOrders = data.newOrders;
+    activeChats = data.activeChats;
+    acceptedToday = data.acceptedToday;
+    recentOrders = data.recentOrders;
+  } catch (e) {
+    console.error("Dashboard data fetch error:", e);
+  }
+
+  const stats = [
+    { label: "Новых заказов", value: String(newOrders), icon: Briefcase, color: "text-primary" },
+    { label: "Активных чатов", value: String(activeChats), icon: MessageSquare, color: "text-secondary" },
+    { label: "Принято сегодня", value: String(acceptedToday), icon: TrendingUp, color: "text-accent-green" },
+  ];
+
+  const uiOrders = recentOrders.map((order) => ({
+    id: order.id,
+    title: order.title,
+    description: order.description,
+    platform: order.platform,
+    budget: order.budget,
+    currency: order.currency,
+    clientName: order.clientName,
+    skills: order.skills,
+    status: order.status,
+    filterScore: order.filterScore,
+    url: order.url,
+    createdAt: order.createdAt.toISOString(),
+  }));
+
   return (
     <div className="p-8">
       <div className="mb-8">
@@ -42,11 +122,21 @@ export default function DashboardPage() {
             Все заказы →
           </Link>
         </div>
-        <div className="p-6 text-center text-foreground/50">
-          <p>Загружаются отфильтрованные заказы...</p>
-          <p className="text-sm mt-2">
-            Подключи парсер и webhook Telegram для получения данных
-          </p>
+        <div className="p-6">
+          {uiOrders.length > 0 ? (
+            <div className="space-y-4">
+              {uiOrders.map((order) => (
+                <OrderCard key={order.id} order={order} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center text-foreground/50 py-8">
+              <p>Пока нет заказов</p>
+              <p className="text-sm mt-2">
+                Запусти парсер (/parse в Telegram или кнопку в Mini App) или подключи webhook Telegram для автоматического сбора
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
