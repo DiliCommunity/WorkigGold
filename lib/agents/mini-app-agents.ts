@@ -20,10 +20,16 @@ export const MINI_APP_AGENTS: MiniAppAgent[] = [
     platformFilter: "Freelance.ru",
     description: "Сканирует freelance.ru",
   },
-  { id: "kwork-sborschik", name: "Кворк-Сборщик", platform: "Kwork", platformFilter: "Kwork", description: "Собирает заказы Kwork" },
   { id: "guru-skaner", name: "Гуру-Сканёр", platform: "Guru", platformFilter: "Guru", description: "Сканирует guru.com" },
+  {
+    id: "kwork-sborschik",
+    name: "Кворк-Сборщик",
+    platform: "Kwork",
+    platformFilter: "Kwork",
+    description: "Сканирует Kwork (нужны KWORK_LOGIN / KWORK_PASSWORD)",
+  },
   { id: "dispatcher", name: "Диспетчер", platform: "Все", platformFilter: null, description: "Все платформы" },
   { id: "vestnik", name: "Вестник", platform: "Уведомления", platformFilter: null, description: "Уведомления в бот" },
 ];
 
-export const GATHER_AGENT_IDS = ["fl-razvedchik", "freelance-ru-skaner", "kwork-sborschik", "guru-skaner"];
+export const GATHER_AGENT_IDS = ["fl-razvedchik", "freelance-ru-skaner", "guru-skaner", "kwork-sborschik"];

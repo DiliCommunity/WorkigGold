@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
         String(chatId),
         `*WorkingGold* — умный помощник для фрилансеров
 
-Автоматически собирает заказы с бирж: FL.ru, Freelance.ru, Kwork, Guru. Агенты парсят объявления и присылают подходящие в этот чат.
+Автоматически собирает заказы с бирж: FL.ru, Freelance.ru, Guru, Kwork (для Kwork задайте KWORK_LOGIN и KWORK_PASSWORD в переменных окружения).
 
 *Возможности:*
 • Парсинг заказов с 4 бирж

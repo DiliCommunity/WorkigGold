@@ -16,9 +16,14 @@ export { parseGuru } from "./guru";
 export { parseKwork } from "./kwork";
 
 export interface RunAllResult {
+  /** Сколько объявлений собрали с бирж (до фильтра по стеку) */
   total: number;
   byPlatform: Record<string, number>;
   errors: string[];
+  /** Сколько новых заказов реально записали в БД (остальные уже были) */
+  savedNew: number;
+  /** Сколько объявлений отсеяли по ключевым словам (не под стек) */
+  filteredOut: number;
 }
 
 type SaveMeta = {
@@ -76,30 +81,29 @@ export async function runAllParsers(options: RunAllParsersOptions = {}): Promise
     agentId: dispatcher.id,
     action: "Запуск всех парсеров",
     status: "info",
-    details: "Фл-Разведчик, Фрилансру-Сканёр, Кворк-Сборщик, Гуру-Сканёр",
+    details: "Фл-Разведчик, Фрилансру-Сканёр, Гуру-Сканёр, Кворк-Сборщик (при наличии KWORK_*)",
   });
 
-  // FL.ru, Freelance.ru, Kwork, Guru — 4 биржи (Habr Freelance закрыт с 28.02.2025)
-  const [fl, freelanceRu, kwork, guru] = await Promise.all([
+  const [fl, freelanceRu, guru, kwork] = await Promise.all([
     parseFLru(),
     parseFreelanceRu(),
-    parseKwork(),
     parseGuru(),
+    parseKwork(),
   ]);
 
   if (fl.error) errors.push(`FL.ru: ${fl.error}`);
   if (freelanceRu.error) errors.push(`Freelance.ru: ${freelanceRu.error}`);
-  if (kwork.error) errors.push(`Kwork: ${kwork.error}`);
   if (guru.error) errors.push(`Guru: ${guru.error}`);
+  if (kwork.error) errors.push(`Kwork: ${kwork.error}`);
 
   byPlatform[fl.platform] = fl.count;
   byPlatform[freelanceRu.platform] = freelanceRu.count;
-  byPlatform[kwork.platform] = kwork.count;
   byPlatform[guru.platform] = guru.count;
+  byPlatform[kwork.platform] = kwork.count;
 
   let saved = 0;
   let filtered = 0;
-  const allOrders = [...fl.orders, ...freelanceRu.orders, ...kwork.orders, ...guru.orders];
+  const allOrders = [...fl.orders, ...freelanceRu.orders, ...guru.orders, ...kwork.orders];
 
   const defaultCfg = getFilterConfig();
   const cfg: KeywordFilterConfig = options.keywordFilter
@@ -126,7 +130,7 @@ export async function runAllParsers(options: RunAllParsersOptions = {}): Promise
   }
 
   const duration = Date.now() - start;
-  const total = fl.count + freelanceRu.count + kwork.count + guru.count;
+  const total = fl.count + freelanceRu.count + guru.count + kwork.count;
 
   await sendAgentLogToTelegram({
     agentName: dispatcher.name,
@@ -135,9 +139,9 @@ export async function runAllParsers(options: RunAllParsersOptions = {}): Promise
     status: errors.length > 0 ? "info" : "success",
     count: total,
     durationMs: duration,
-    details: `FL: ${fl.count}, Freelance.ru: ${freelanceRu.count}, Kwork: ${kwork.count}, Guru: ${guru.count}. По стеку: ${saved} новых, отфильтровано: ${filtered}`,
+    details: `FL: ${fl.count}, Freelance.ru: ${freelanceRu.count}, Guru: ${guru.count}, Kwork: ${kwork.count}. По стеку: ${saved} новых, отфильтровано: ${filtered}.`,
     error: errors.length ? errors.slice(0, 3).join("; ") : undefined,
   });
 
-  return { total, byPlatform, errors };
+  return { total, byPlatform, errors, savedNew: saved, filteredOut: filtered };
 }

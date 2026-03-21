@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { UiOrder } from "@/components/OrderCard";
-import { OrderCard } from "@/components/OrderCard";
+import { OrderCard, iconBtn } from "@/components/OrderCard";
 import { getFilterConfig } from "@/lib/filters/skills";
 import type { KeywordFilterConfig } from "@/lib/filters/keyword-filter";
 import { scoreTextAgainstKeywords } from "@/lib/filters/keyword-filter";
@@ -198,14 +198,14 @@ export function OrdersClient({ initialOrders }: { initialOrders: UiOrder[] }) {
                 ))}
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
+            <div className="flex flex-wrap gap-2">
               {(["all", "favorites", "urgent"] as const).map((f) => (
                 <button
                   key={f}
                   type="button"
                   onClick={() => setActiveFolder(f)}
                   className={cn(
-                    "px-3 py-2 rounded-lg border text-sm transition flex items-center justify-center gap-2",
+                    "min-h-[40px] flex-1 min-w-[100px] px-3 py-2 rounded-lg border text-sm font-medium transition flex items-center justify-center",
                     activeFolder === f
                       ? "bg-secondary/15 text-secondary border-secondary/30"
                       : "bg-white/5 text-foreground/70 border-white/10 hover:border-secondary/30"
@@ -384,39 +384,42 @@ export function OrdersClient({ initialOrders }: { initialOrders: UiOrder[] }) {
           sortedOrders.map((o) => {
             const f = favorites[o.id];
             return (
-              <div key={o.id} className="relative">
-                <div className="absolute right-3 top-3 z-10 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => toggle(o.id, "favorites")}
-                    className={cn(
-                      "p-2 rounded-lg border backdrop-blur",
-                      f === "favorites"
-                        ? "bg-primary/20 text-primary border-primary/30"
-                        : "bg-black/20 text-foreground/70 border-white/10 hover:border-primary/30"
-                    )}
-                    aria-label="В избранное"
-                    title="В избранное"
-                  >
-                    <Star className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => toggle(o.id, "urgent")}
-                    className={cn(
-                      "p-2 rounded-lg border backdrop-blur",
-                      f === "urgent"
-                        ? "bg-red-500/20 text-red-300 border-red-500/30"
-                        : "bg-black/20 text-foreground/70 border-white/10 hover:border-red-500/30"
-                    )}
-                    aria-label="Срочно"
-                    title="Срочно"
-                  >
-                    <AlertTriangle className="w-4 h-4" />
-                  </button>
-                </div>
-                <OrderCard order={o} />
-              </div>
+              <OrderCard
+                key={o.id}
+                order={o}
+                actions={
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => toggle(o.id, "favorites")}
+                      className={cn(
+                        iconBtn,
+                        f === "favorites"
+                          ? "bg-primary/20 text-primary border-primary/30"
+                          : "bg-white/5 text-foreground/70 border-white/10 hover:border-primary/30"
+                      )}
+                      aria-label="В избранное"
+                      title="В избранное"
+                    >
+                      <Star className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => toggle(o.id, "urgent")}
+                      className={cn(
+                        iconBtn,
+                        f === "urgent"
+                          ? "bg-red-500/20 text-red-300 border-red-500/30"
+                          : "bg-white/5 text-foreground/70 border-white/10 hover:border-red-500/30"
+                      )}
+                      aria-label="Срочно"
+                      title="Срочно"
+                    >
+                      <AlertTriangle className="w-4 h-4" />
+                    </button>
+                  </>
+                }
+              />
             );
           })
         )}

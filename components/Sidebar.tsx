@@ -6,7 +6,6 @@ import { useEffect } from "react";
 import {
   LayoutDashboard,
   MessageSquare,
-  BarChart3,
   Briefcase,
   ListTodo,
   Calendar,
@@ -20,7 +19,6 @@ const nav = [
   { href: "/orders", label: "Заказы", icon: Briefcase },
   { href: "/chat", label: "Чаты", icon: MessageSquare },
   { href: "/agents", label: "Агенты", icon: GitBranch },
-  { href: "/stats", label: "Статистика", icon: BarChart3 },
   { href: "/tasks", label: "Задачи", icon: ListTodo },
   { href: "/calendar", label: "Календарь", icon: Calendar },
 ];

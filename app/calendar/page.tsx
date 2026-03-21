@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Deadline = {
@@ -124,16 +124,24 @@ export default function CalendarPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-        if (res.ok) { closeModal(); loadDeadlines(); }
+        if (res.ok) {
+          closeModal();
+          loadDeadlines();
+        }
       } else {
         const res = await fetch("/api/deadlines", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-        if (res.ok) { closeModal(); loadDeadlines(); }
+        if (res.ok) {
+          closeModal();
+          loadDeadlines();
+        }
       }
-    } catch {}
+    } catch {
+      // ignore
+    }
   };
 
   const toggleCompleted = async (id: string, completed: boolean) => {
@@ -144,7 +152,9 @@ export default function CalendarPage() {
         body: JSON.stringify({ completed }),
       });
       if (res.ok) loadDeadlines();
-    } catch {}
+    } catch {
+      // ignore
+    }
   };
 
   const deleteDeadline = async (id: string) => {
@@ -152,7 +162,9 @@ export default function CalendarPage() {
       await fetch(`/api/deadlines/${id}`, { method: "DELETE" });
       closeModal();
       loadDeadlines();
-    } catch {}
+    } catch {
+      // ignore
+    }
   };
 
   const year = viewDate.getFullYear();
@@ -168,126 +180,166 @@ export default function CalendarPage() {
   }, {});
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-foreground">Календарь дедлайнов</h1>
-        <p className="text-foreground/60 mt-1">
-          Клик по дате — добавить или изменить дедлайн. Проект, задачи, роль, стек.
+    <div className="p-4 md:p-8 max-w-6xl mx-auto">
+      <div className="mb-6 md:mb-8">
+        <h1 className="text-2xl md:text-3xl font-bold text-foreground tracking-tight">
+          Календарь дедлайнов
+        </h1>
+        <p className="text-foreground/60 mt-2 text-sm md:text-base max-w-2xl">
+          Клик по дате — новый дедлайн. Клик по задаче в ячейке — редактирование.
         </p>
       </div>
 
-      <div className="glass rounded-xl p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-semibold">
-            {MONTHS[month]} {year}
+      <div className="bg-card rounded-2xl border border-white/5 shadow-lg shadow-black/20 overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 px-4 py-4 md:px-6 md:py-5 border-b border-white/5 bg-white/[0.02]">
+          <h2 className="text-lg md:text-xl font-semibold text-foreground">
+            {MONTHS[month]} <span className="text-foreground/50 font-normal">{year}</span>
           </h2>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-1">
             <button
+              type="button"
               onClick={() => setViewDate(new Date(year, month - 1))}
-              className="p-2 rounded-lg hover:bg-white/5"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 text-foreground/80 hover:bg-white/5 hover:border-primary/30 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              aria-label="Предыдущий месяц"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
             <button
+              type="button"
               onClick={() => setViewDate(new Date())}
-              className="px-3 py-1 text-sm rounded-lg hover:bg-white/5"
+              className="px-4 h-10 rounded-xl border border-white/10 text-sm font-medium text-foreground/90 hover:bg-primary/10 hover:border-primary/30 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
               Сегодня
             </button>
             <button
+              type="button"
               onClick={() => setViewDate(new Date(year, month + 1))}
-              className="p-2 rounded-lg hover:bg-white/5"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 text-foreground/80 hover:bg-white/5 hover:border-primary/30 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              aria-label="Следующий месяц"
             >
               <ChevronRight className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {loading ? (
-          <p className="text-foreground/50 py-12 text-center">Загрузка...</p>
-        ) : (
-          <>
-            <div className="grid grid-cols-7 gap-1 mb-2">
-              {WEEKDAYS.map((d) => (
-                <div
-                  key={d}
-                  className="text-center text-sm font-medium text-foreground/60 py-2"
-                >
-                  {d}
-                </div>
-              ))}
-            </div>
-            <div className="grid grid-cols-7 gap-1">
-              {cells.map((day, i) => {
-                if (day === null) {
-                  return <div key={`e-${i}`} className="aspect-square" />;
-                }
-                const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-                const items = deadlinesByDate[dateKey] || [];
-                const isToday = dateKey === todayKey;
-                return (
-                  <button
-                    key={dateKey}
-                    type="button"
-                    onClick={() => openModal(year, month, day)}
-                    className={cn(
-                      "aspect-square rounded-lg border text-left p-1.5 transition-colors min-h-[60px]",
-                      isToday
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-white/10 hover:border-primary/30 hover:bg-white/5"
-                    )}
+        <div className="p-3 md:p-5">
+          {loading ? (
+            <p className="text-foreground/50 py-16 text-center text-sm">Загрузка календаря…</p>
+          ) : (
+            <>
+              <div className="grid grid-cols-7 gap-px md:gap-1 mb-2 rounded-lg overflow-hidden bg-white/5 p-px md:p-0 md:bg-transparent">
+                {WEEKDAYS.map((d) => (
+                  <div
+                    key={d}
+                    className="text-center text-xs md:text-sm font-semibold text-foreground/50 py-2 md:py-2.5 bg-card md:bg-transparent"
                   >
-                    <span className="text-sm font-medium">{day}</span>
-                    {items.length > 0 && (
-                      <div className="mt-0.5 space-y-0.5">
-                        {items.slice(0, 2).map((d) => (
+                    {d}
+                  </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-7 gap-px md:gap-1.5">
+                {cells.map((day, i) => {
+                  if (day === null) {
+                    return (
+                      <div
+                        key={`e-${i}`}
+                        className="min-h-[72px] md:min-h-[88px] rounded-lg bg-white/[0.02] md:bg-transparent"
+                      />
+                    );
+                  }
+                  const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                  const items = deadlinesByDate[dateKey] || [];
+                  const isToday = dateKey === todayKey;
+                  return (
+                    <button
+                      key={dateKey}
+                      type="button"
+                      onClick={() => openModal(year, month, day)}
+                      className={cn(
+                        "min-h-[72px] md:min-h-[88px] rounded-xl border text-left p-1.5 md:p-2 transition-all outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#141b26] flex flex-col",
+                        isToday
+                          ? "border-primary bg-primary/10 shadow-[0_0_0_1px_rgba(212,175,55,0.35)]"
+                          : "border-white/10 bg-card hover:border-primary/35 hover:bg-white/[0.03]"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "text-xs md:text-sm font-semibold w-7 h-7 md:w-8 md:h-8 inline-flex items-center justify-center rounded-lg",
+                          isToday ? "bg-primary/25 text-primary" : "text-foreground/90"
+                        )}
+                      >
+                        {day}
+                      </span>
+                      <div className="mt-1 flex-1 flex flex-col gap-0.5 min-h-0 overflow-hidden">
+                        {items.slice(0, 2).map((dItem) => (
                           <div
-                            key={d.id}
+                            key={dItem.id}
+                            role="button"
+                            tabIndex={0}
                             onClick={(e) => {
                               e.stopPropagation();
-                              openEdit(d);
+                              openEdit(dItem);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                openEdit(dItem);
+                              }
                             }}
                             className={cn(
-                              "text-xs truncate px-1 py-0.5 rounded",
-                              d.completed
-                                ? "bg-foreground/10 text-foreground/50 line-through"
-                                : "bg-primary/20 text-primary"
+                              "text-[10px] md:text-xs truncate px-1 py-0.5 rounded-md cursor-pointer border border-transparent hover:border-white/10",
+                              dItem.completed
+                                ? "bg-foreground/5 text-foreground/45 line-through"
+                                : "bg-primary/15 text-primary border-primary/20"
                             )}
                           >
-                            {d.projectName}
+                            {dItem.projectName}
                           </div>
                         ))}
                         {items.length > 2 && (
-                          <div className="text-xs text-foreground/50">+{items.length - 2}</div>
+                          <div className="text-[10px] text-foreground/45 px-1">
+                            +{items.length - 2} ещё
+                          </div>
                         )}
                       </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </>
-        )}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {modalDate && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
           onClick={closeModal}
+          role="presentation"
         >
           <div
-            className="relative w-full max-w-lg bg-card border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+            className="relative w-full max-w-lg bg-card border border-white/10 rounded-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
           >
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-secondary to-primary opacity-80" />
-            <div className="p-6 max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-bold text-foreground">
-                  {editing ? "Редактировать дедлайн" : "Новый дедлайн"}
-                </h3>
+            <div className="h-1 shrink-0 bg-gradient-to-r from-primary via-secondary to-primary opacity-90" />
+            <div className="p-5 md:p-6 overflow-y-auto flex-1">
+              <div className="flex justify-between items-start gap-3 mb-6">
+                <div>
+                  <h3 className="text-lg font-bold text-foreground">
+                    {editing ? "Редактировать дедлайн" : "Новый дедлайн"}
+                  </h3>
+                  <p className="text-xs text-foreground/50 mt-1">
+                    {modalDate.split("-").reverse().join(".")}
+                  </p>
+                </div>
                 <button
+                  type="button"
                   onClick={closeModal}
-                  className="p-2 rounded-lg text-foreground/50 hover:bg-white/5"
+                  className="shrink-0 p-2 rounded-xl text-foreground/50 hover:bg-white/5 hover:text-foreground transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                  aria-label="Закрыть"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -295,7 +347,7 @@ export default function CalendarPage() {
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-foreground/80 mb-1">
+                  <label className="block text-sm font-medium text-foreground/80 mb-1.5">
                     Проект *
                   </label>
                   <input
@@ -304,23 +356,23 @@ export default function CalendarPage() {
                     onChange={(e) => setForm((f) => ({ ...f, projectName: e.target.value }))}
                     placeholder="Название проекта"
                     required
-                    className="w-full px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-foreground"
+                    className="w-full px-4 py-2.5 rounded-xl bg-black/25 border border-white/10 text-foreground placeholder:text-foreground/35 outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/30"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-foreground/80 mb-1">
-                    Клиент (кому сдаём)
+                  <label className="block text-sm font-medium text-foreground/80 mb-1.5">
+                    Клиент
                   </label>
                   <input
                     type="text"
                     value={form.clientName}
                     onChange={(e) => setForm((f) => ({ ...f, clientName: e.target.value }))}
                     placeholder="Компания / заказчик"
-                    className="w-full px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-foreground"
+                    className="w-full px-4 py-2.5 rounded-xl bg-black/25 border border-white/10 text-foreground placeholder:text-foreground/35 outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/30"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-foreground/80 mb-1">
+                  <label className="block text-sm font-medium text-foreground/80 mb-1.5">
                     Дата и время сдачи *
                   </label>
                   <input
@@ -328,47 +380,49 @@ export default function CalendarPage() {
                     value={form.deadlineAt}
                     onChange={(e) => setForm((f) => ({ ...f, deadlineAt: e.target.value }))}
                     required
-                    className="w-full px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-foreground"
+                    className="w-full px-4 py-2.5 rounded-xl bg-black/25 border border-white/10 text-foreground outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/30"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-foreground/80 mb-1">
-                    Задачи (что сдать)
+                  <label className="block text-sm font-medium text-foreground/80 mb-1.5">
+                    Задачи
                   </label>
                   <textarea
                     value={form.tasks}
                     onChange={(e) => setForm((f) => ({ ...f, tasks: e.target.value }))}
-                    placeholder="Список задач через Enter или запятую"
+                    placeholder="Что сдать"
                     rows={3}
-                    className="w-full px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-foreground resize-none"
+                    className="w-full px-4 py-2.5 rounded-xl bg-black/25 border border-white/10 text-foreground placeholder:text-foreground/35 resize-none outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/30"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-foreground/80 mb-1">
-                    Моя роль
-                  </label>
-                  <input
-                    type="text"
-                    value={form.myRole}
-                    onChange={(e) => setForm((f) => ({ ...f, myRole: e.target.value }))}
-                    placeholder="Frontend, Backend, Fullstack..."
-                    className="w-full px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-foreground"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-foreground/80 mb-1.5">
+                      Моя роль
+                    </label>
+                    <input
+                      type="text"
+                      value={form.myRole}
+                      onChange={(e) => setForm((f) => ({ ...f, myRole: e.target.value }))}
+                      placeholder="Frontend, Fullstack…"
+                      className="w-full px-4 py-2.5 rounded-xl bg-black/25 border border-white/10 text-foreground placeholder:text-foreground/35 outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/30"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground/80 mb-1.5">
+                      Стек
+                    </label>
+                    <input
+                      type="text"
+                      value={form.techStack}
+                      onChange={(e) => setForm((f) => ({ ...f, techStack: e.target.value }))}
+                      placeholder="React, Node…"
+                      className="w-full px-4 py-2.5 rounded-xl bg-black/25 border border-white/10 text-foreground placeholder:text-foreground/35 outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/30"
+                    />
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-foreground/80 mb-1">
-                    Стек технологий
-                  </label>
-                  <input
-                    type="text"
-                    value={form.techStack}
-                    onChange={(e) => setForm((f) => ({ ...f, techStack: e.target.value }))}
-                    placeholder="React, Node, PostgreSQL..."
-                    className="w-full px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-foreground"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-foreground/80 mb-1">
+                  <label className="block text-sm font-medium text-foreground/80 mb-1.5">
                     Заметки
                   </label>
                   <textarea
@@ -376,34 +430,34 @@ export default function CalendarPage() {
                     onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
                     placeholder="Дополнительно"
                     rows={2}
-                    className="w-full px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-foreground resize-none"
+                    className="w-full px-4 py-2.5 rounded-xl bg-black/25 border border-white/10 text-foreground placeholder:text-foreground/35 resize-none outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/30"
                   />
                 </div>
 
-                <div className="flex gap-3 pt-4">
+                <div className="flex flex-col sm:flex-row gap-2 pt-2">
                   <button
                     type="submit"
-                    className="flex-1 px-4 py-3 rounded-xl bg-primary text-background font-semibold"
+                    className="flex-1 px-4 py-3 rounded-xl bg-primary text-background font-semibold hover:bg-primary-light transition-colors"
                   >
                     {editing ? "Сохранить" : "Добавить"}
                   </button>
                   {editing && (
-                    <button
-                      type="button"
-                      onClick={() => editing && toggleCompleted(editing.id, !editing.completed)}
-                      className="px-4 py-3 rounded-xl border border-white/10 hover:bg-white/5"
-                    >
-                      {editing.completed ? "Вернуть" : "Сдано"}
-                    </button>
-                  )}
-                  {editing && (
-                    <button
-                      type="button"
-                      onClick={() => editing && deleteDeadline(editing.id)}
-                      className="px-4 py-3 rounded-xl border border-red-500/50 text-red-400 hover:bg-red-500/10"
-                    >
-                      Удалить
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => editing && toggleCompleted(editing.id, !editing.completed)}
+                        className="px-4 py-3 rounded-xl border border-white/15 hover:bg-white/5 text-sm font-medium transition-colors"
+                      >
+                        {editing.completed ? "Вернуть" : "Сдано"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => editing && deleteDeadline(editing.id)}
+                        className="px-4 py-3 rounded-xl border border-red-500/40 text-red-400 hover:bg-red-500/10 text-sm font-medium transition-colors"
+                      >
+                        Удалить
+                      </button>
+                    </>
                   )}
                 </div>
               </form>

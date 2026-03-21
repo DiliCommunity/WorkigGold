@@ -1,35 +1,35 @@
-import * as cheerio from "cheerio";
 import { AGENTS } from "@/lib/agents/constants";
 import { sendAgentLogToTelegram } from "@/lib/telegram-logger";
+import {
+  getKworkCredentialsFromEnv,
+  kworkFetchProjectsPages,
+  kworkSignIn,
+  mapKworkProjectToOrder,
+} from "@/lib/kwork/mobile-api";
 import type { ParserResult, ParsedOrder } from "./types";
 
-const KWORK_URL = "https://kwork.ru/projects";
-const USER_AGENT =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36";
+const MAX_PROJECT_PAGES = 5;
 
-function parseBudget(text: string): { value?: number; currency: string } {
-  const clean = text.replace(/\u00a0/g, " ");
-  const rubMatch = clean.match(/(\d[\d\s]*)\s*(?:₽|руб\.?|RUB)/i);
-  if (rubMatch?.[1]) {
-    const val = parseFloat(rubMatch[1].replace(/\s/g, ""));
-    return { value: isNaN(val) ? undefined : val, currency: "RUB" };
-  }
-  const usdMatch = clean.match(/(\d[\d\s]*)\s*(?:\$|USD)/i);
-  if (usdMatch?.[1]) {
-    const val = parseFloat(usdMatch[1].replace(/\s/g, ""));
-    return { value: isNaN(val) ? undefined : val, currency: "USD" };
-  }
-  const numMatch = clean.match(/(\d[\d\s]+)/);
-  if (numMatch?.[1]) {
-    const val = parseFloat(numMatch[1].replace(/\s/g, ""));
-    return { value: isNaN(val) ? undefined : val, currency: "RUB" };
-  }
-  return { currency: "RUB" };
-}
-
+/**
+ * Kwork: лента /projects рендерится в браузере (JS), HTML-парсинг не работает.
+ * Сбор заказов — через мобильное API (логин/пароль из env: KWORK_LOGIN, KWORK_PASSWORD).
+ */
 export async function parseKwork(): Promise<ParserResult> {
   const agent = AGENTS.KWORK_SBORSCHIK;
   const start = Date.now();
+
+  const creds = getKworkCredentialsFromEnv();
+  if (!creds) {
+    await sendAgentLogToTelegram({
+      agentName: agent.name,
+      agentId: agent.id,
+      action: "Kwork пропущен",
+      status: "info",
+      details:
+        "Нет KWORK_LOGIN / KWORK_PASSWORD в окружении. Добавьте в .env (локально) или в Vercel → Environment Variables.",
+    });
+    return { platform: "Kwork", orders: [], count: 0 };
+  }
 
   try {
     await sendAgentLogToTelegram({
@@ -37,83 +37,30 @@ export async function parseKwork(): Promise<ParserResult> {
       agentId: agent.id,
       action: "Запуск сканирования Kwork",
       status: "info",
-      details: "Отправка запроса к kwork.ru/projects",
+      details: "Вход через api.kwork.ru (мобильное API)",
     });
 
-    const orders: ParsedOrder[] = [];
-    const seen = new Set<string>();
-    let firstPageHtml: string | null = null;
-
-    for (let page = 1; page <= 3; page++) {
-      const url = page === 1 ? KWORK_URL : `${KWORK_URL}?page=${page}`;
-
-      const res = await fetch(url, {
-        headers: { "User-Agent": USER_AGENT, Accept: "text/html" },
-      });
-
-      if (!res.ok) {
-        // если первая страница упала — считаем ошибкой, остальные тихо пропускаем
-        if (page === 1) {
-          throw new Error(`HTTP ${res.status} on ${url}`);
-        }
-        continue;
-      }
-
-      const html = await res.text();
-      if (page === 1) firstPageHtml = html;
-      const $ = cheerio.load(html);
-
-      // Kwork: ссылки на проекты
-      $("a[href*='kwork.ru/projects/'], a[href*='/project/']").each((_, el) => {
-        const $a = $(el);
-        const href = $a.attr("href") || "";
-        const match = href.match(/\/(?:projects?|project)\/(\d+)/i);
-        if (!match) return;
-
-        const id = match[1];
-        if (seen.has(id)) return;
-        seen.add(id);
-
-        const title =
-          $a.find("[class*='title'], [class*='name'], h2, h3").first().text().trim() ||
-          $a.text().trim().split("\n")[0]?.trim().slice(0, 300);
-
-        if (!title || title.length < 5) return;
-
-        const block = $a.closest("[class*='card'], [class*='item'], [class*='project']");
-        const desc =
-          block.find("[class*='desc'], [class*='text']").first().text().trim().slice(0, 500) ||
-          title;
-        const budgetText = block.text();
-        const { value: budget, currency } = parseBudget(budgetText);
-
-        const urlFull = href.startsWith("http") ? href : `https://kwork.ru${href}`;
-
-        orders.push({
-          title: title.slice(0, 300),
-          description: desc,
-          platform: "Kwork",
-          platformOrderId: id,
-          budget,
-          currency,
-          url: urlFull,
-          rawData: {},
-        });
-      });
+    const auth = await kworkSignIn(creds.login, creds.password, creds.phoneLast);
+    if ("error" in auth) {
+      throw new Error(auth.error);
     }
 
-    // Kwork всё чаще рендерит ленту проектов на клиенте (JS), и в HTML нет ссылок на проекты.
-    // В таком случае возвращаем явную ошибку (а не "0 заказов без объяснения").
-    if (orders.length === 0 && firstPageHtml) {
-      const hasAnyProjectHref =
-        firstPageHtml.includes("/projects/") ||
-        firstPageHtml.includes("kwork.ru/projects/") ||
-        firstPageHtml.includes("/project/");
-      if (!hasAnyProjectHref) {
-        throw new Error(
-          "Страница /projects рендерится на клиенте (JS). В HTML нет ссылок на проекты — нужен другой источник/эндпоинт."
-        );
-      }
+    const rawList = await kworkFetchProjectsPages(auth.token, MAX_PROJECT_PAGES);
+    const orders: ParsedOrder[] = [];
+
+    for (const raw of rawList) {
+      const m = mapKworkProjectToOrder(raw);
+      if (!m) continue;
+      orders.push({
+        title: m.title,
+        description: m.description,
+        platform: "Kwork",
+        platformOrderId: m.id,
+        budget: m.budget,
+        currency: m.currency,
+        url: m.url,
+        rawData: raw as Record<string, unknown>,
+      });
     }
 
     const duration = Date.now() - start;
@@ -124,7 +71,7 @@ export async function parseKwork(): Promise<ParserResult> {
       status: "success",
       count: orders.length,
       durationMs: duration,
-      details: `Найдено ${orders.length} объявлений (до 3 страниц)`,
+      details: `API: получено ${rawList.length} записей, в заказы: ${orders.length}`,
     });
 
     return { platform: "Kwork", orders, count: orders.length };

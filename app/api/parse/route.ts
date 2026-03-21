@@ -27,6 +27,12 @@ export async function POST(request: Request) {
       total: result.total,
       byPlatform: result.byPlatform,
       errors: result.errors,
+      /** Новых записей в БД за этот запуск */
+      newSaved: result.savedNew,
+      /** Сколько объявлений собрали с бирж (сырой счётчик) */
+      scannedTotal: result.total,
+      /** Отсеяно фильтром по стеку */
+      filteredOut: result.filteredOut,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

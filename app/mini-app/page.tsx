@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Script from "next/script";
-import { X, ExternalLink, ChevronRight, Activity, ArrowLeft } from "lucide-react";
+import { X, ExternalLink, ChevronRight, Activity, ArrowLeft, Star, AlertTriangle } from "lucide-react";
+import { iconBtn } from "@/components/OrderCard";
+import { cn } from "@/lib/utils";
 import { MINI_APP_AGENTS, GATHER_AGENT_IDS, type MiniAppAgent } from "@/lib/agents/mini-app-agents";
 import { STACK_DISPLAY, getFilterConfig, DEFAULT_MIN_INCLUDE_MATCHES } from "@/lib/filters/skills";
 import type { KeywordFilterConfig } from "@/lib/filters/keyword-filter";
@@ -32,15 +34,6 @@ interface AgentLog {
   createdAt: string;
 }
 
-interface Stats {
-  total: number;
-  byPlatform: Record<string, number>;
-}
-
-interface LanguageStats {
-  [language: string]: number;
-}
-
 declare global {
   interface Window {
     Telegram?: {
@@ -57,13 +50,13 @@ declare global {
 
 export default function MiniAppPage() {
   const [orders, setOrders] = useState<Order[]>([]);
-  const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [parseLoading, setParseLoading] = useState(false);
   const [showParseModal, setShowParseModal] = useState(false);
   const [parseProgress, setParseProgress] = useState<0 | 25 | 50 | 75 | 100>(0);
-  const [parseLangStats, setParseLangStats] = useState<LanguageStats | null>(null);
-  const [parseTotal, setParseTotal] = useState<number | null>(null);
+  const [parseNewSaved, setParseNewSaved] = useState<number | null>(null);
+  const [parseScanned, setParseScanned] = useState<number | null>(null);
+  const [parseFilteredOut, setParseFilteredOut] = useState<number | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<MiniAppAgent | null>(null);
   const [agentLogs, setAgentLogs] = useState<AgentLog[]>([]);
@@ -89,10 +82,11 @@ export default function MiniAppPage() {
     const res = scoreTextAgainstKeywords(`${o.title} ${o.description || ""}`, filterConfig);
     return res.matches;
   });
+  // Как на странице «Заказы»: избранное/срочно — все отмеченные по бирже, без keyword-фильтра
   const folderOrders =
     activeFolder === "all"
       ? filteredOrders
-      : filteredOrders.filter((o) => favorites[o.id] === activeFolder);
+      : baseByPlatform.filter((o) => favorites[o.id] === activeFolder);
 
   const searchedOrders = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -133,33 +127,13 @@ export default function MiniAppPage() {
     return Array.from(map.values()).sort((a, b) => b.lastAt - a.lastAt);
   }, [orders]);
 
-  const languageStats = useMemo<LanguageStats>(() => {
-    const stats: LanguageStats = {};
-    for (const order of filteredOrders) {
-      const title = `${order.title} ${order.description}`.toLowerCase();
-      const languages: { key: string; label: string }[] = [
-        { key: "javascript", label: "JavaScript" },
-        { key: "typescript", label: "TypeScript" },
-        { key: "python", label: "Python" },
-        { key: "c++", label: "C++" },
-        { key: "c#", label: "C#" },
-        { key: "php", label: "PHP" },
-        { key: "go ", label: "Go" },
-        { key: "golang", label: "Go" },
-        { key: "java", label: "Java" },
-        { key: "rust", label: "Rust" },
-      ];
-
-      const addedForOrder = new Set<string>();
-      for (const lang of languages) {
-        if (title.includes(lang.key) && !addedForOrder.has(lang.label)) {
-          stats[lang.label] = (stats[lang.label] || 0) + 1;
-          addedForOrder.add(lang.label);
-        }
-      }
+  const byPlatformCounts = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const o of orders) {
+      m[o.platform] = (m[o.platform] || 0) + 1;
     }
-    return stats;
-  }, [filteredOrders]);
+    return m;
+  }, [orders]);
 
   const fetchOrders = async () => {
     try {
@@ -172,22 +146,6 @@ export default function MiniAppPage() {
       }
     } catch {
       setOrders([]);
-    }
-  };
-
-  const fetchStats = async () => {
-    try {
-      const res = await fetch("/api/orders?limit=500");
-      if (res.ok) {
-        const data: Order[] = await res.json();
-        const byPlatform: Record<string, number> = {};
-        data.forEach((o) => {
-          byPlatform[o.platform] = (byPlatform[o.platform] || 0) + 1;
-        });
-        setStats({ total: data.length, byPlatform });
-      }
-    } catch {
-      setStats(null);
     }
   };
 
@@ -210,14 +168,15 @@ export default function MiniAppPage() {
 
   const load = async () => {
     setLoading(true);
-    await Promise.all([fetchOrders(), fetchStats()]);
+    await fetchOrders();
     setLoading(false);
   };
 
   const runParse = async () => {
     setParseError(null);
-    setParseLangStats(null);
-    setParseTotal(null);
+    setParseNewSaved(null);
+    setParseScanned(null);
+    setParseFilteredOut(null);
     setShowParseModal(true);
     setParseProgress(25);
     setParseLoading(true);
@@ -230,21 +189,20 @@ export default function MiniAppPage() {
       setParseProgress(50);
       const data = await res.json();
       if (data.ok) {
-        const total = typeof data.total === "number" ? data.total : 0;
-        setParseTotal(total);
-
-        // если API вернул распределение по языкам — используем его,
-        // иначе считаем по уже отфильтрованным заказам после перезагрузки
-        if (data.byLanguage && typeof data.byLanguage === "object") {
-          setParseLangStats(data.byLanguage as LanguageStats);
-        }
+        const scanned =
+          typeof data.scannedTotal === "number"
+            ? data.scannedTotal
+            : typeof data.total === "number"
+              ? data.total
+              : 0;
+        const newSaved = typeof data.newSaved === "number" ? data.newSaved : 0;
+        const filteredOut = typeof data.filteredOut === "number" ? data.filteredOut : 0;
+        setParseScanned(scanned);
+        setParseNewSaved(newSaved);
+        setParseFilteredOut(filteredOut);
 
         setParseProgress(75);
         await load();
-
-        if (!data.byLanguage) {
-          setParseLangStats(languageStats);
-        }
         setParseProgress(100);
       } else {
         const msg = data.error || "неизвестная ошибка";
@@ -437,47 +395,49 @@ export default function MiniAppPage() {
             </section>
           )}
 
-          {stats && !selectedAgent?.platformFilter && (
+          {!selectedAgent?.platformFilter && orders.length > 0 && (
             <section className="mb-6">
-              <h2 className="text-sm font-medium text-gray-400 mb-2">Статистика</h2>
-              <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-                <div className="text-2xl font-bold text-amber-400 mb-2">
-                  {stats.total} заказов
-                </div>
-                <div className="flex flex-wrap gap-2 text-sm mb-3">
+              <h2 className="text-sm font-medium text-gray-400 mb-2">Фильтры списка</h2>
+              <div className="bg-white/5 rounded-xl p-4 border border-white/10 space-y-3">
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  Архив заказов — в админке «Заказы». Здесь тот же список с фильтром по вашему стеку.
+                </p>
+                <div className="flex flex-wrap gap-2 text-sm">
                   <button
                     type="button"
                     onClick={() => setActivePlatform(null)}
-                    className={`px-2 py-1 rounded border transition ${
+                    className={`px-3 py-1.5 rounded-lg border transition min-h-[36px] ${
                       activePlatform === null
                         ? "bg-amber-500/25 text-amber-200 border-amber-500/40"
                         : "bg-white/5 text-gray-300 border-white/10 hover:border-amber-500/30"
                     }`}
                   >
-                    Все биржи
+                    Все биржи ({orders.length})
                   </button>
-                  {Object.entries(stats.byPlatform).map(([p, n]) => (
-                    <button
-                      key={p}
-                      type="button"
-                      onClick={() => setActivePlatform(p)}
-                      className={`px-2 py-1 rounded border transition ${
-                        activePlatform === p
-                          ? "bg-amber-500/25 text-amber-200 border-amber-500/40"
-                          : "bg-white/5 text-gray-300 border-white/10 hover:border-amber-500/30"
-                      }`}
-                    >
-                      {p}: {n}
-                    </button>
-                  ))}
+                  {Object.entries(byPlatformCounts)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([p, n]) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setActivePlatform(p)}
+                        className={`px-3 py-1.5 rounded-lg border transition min-h-[36px] ${
+                          activePlatform === p
+                            ? "bg-amber-500/25 text-amber-200 border-amber-500/40"
+                            : "bg-white/5 text-gray-300 border-white/10 hover:border-amber-500/30"
+                        }`}
+                      >
+                        {p}: {n}
+                      </button>
+                    ))}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {(["all", "favorites", "urgent"] as const).map((f) => (
                     <button
                       key={f}
                       type="button"
                       onClick={() => setActiveFolder(f)}
-                      className={`flex-1 px-2 py-2 rounded-lg border text-sm transition ${
+                      className={`min-h-[40px] flex-1 min-w-[100px] px-3 py-2 rounded-lg border text-sm font-medium transition flex items-center justify-center ${
                         activeFolder === f
                           ? "bg-amber-500/25 text-amber-200 border-amber-500/40"
                           : "bg-white/5 text-gray-300 border-white/10 hover:border-amber-500/30"
@@ -602,24 +562,26 @@ export default function MiniAppPage() {
                       key={o.id}
                       className="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-amber-500/30 transition"
                     >
-                      <div className="space-y-3">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                         <a
                           href={o.url || "#"}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="block font-medium line-clamp-2 min-w-0 hover:text-amber-200 transition-colors"
+                          className="min-w-0 flex-1 font-medium text-sm sm:text-base line-clamp-2 hover:text-amber-200 transition-colors pr-0 sm:pr-2"
                         >
                           {o.title}
                         </a>
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex shrink-0 flex-row items-center justify-end gap-1.5 self-end sm:self-start">
                           <button
                             type="button"
-                            aria-label="Добавить в избранное"
-                            className={`px-2.5 py-1.5 rounded-lg text-xs border transition ${
+                            aria-label="В избранное"
+                            title="В избранное"
+                            className={cn(
+                              iconBtn,
                               fav === "favorites"
-                                ? "bg-amber-500/25 border-amber-500/40 text-amber-200"
+                                ? "bg-amber-500/25 text-amber-200 border-amber-500/40"
                                 : "bg-white/5 border-white/10 text-gray-300 hover:border-amber-500/30"
-                            }`}
+                            )}
                             onClick={() =>
                               setFavorites((prev) => {
                                 const next = { ...prev };
@@ -629,16 +591,18 @@ export default function MiniAppPage() {
                               })
                             }
                           >
-                            Избр.
+                            <Star className="w-4 h-4" />
                           </button>
                           <button
                             type="button"
-                            aria-label="Пометить как срочное"
-                            className={`px-2.5 py-1.5 rounded-lg text-xs border transition ${
+                            aria-label="Срочно"
+                            title="Срочно"
+                            className={cn(
+                              iconBtn,
                               fav === "urgent"
-                                ? "bg-red-500/20 border-red-500/40 text-red-200"
+                                ? "bg-red-500/20 text-red-200 border-red-500/40"
                                 : "bg-white/5 border-white/10 text-gray-300 hover:border-red-500/30"
-                            }`}
+                            )}
                             onClick={() =>
                               setFavorites((prev) => {
                                 const next = { ...prev };
@@ -648,25 +612,28 @@ export default function MiniAppPage() {
                               })
                             }
                           >
-                            Срочно
+                            <AlertTriangle className="w-4 h-4" />
                           </button>
                           <a
                             href={o.url || "#"}
                             target="_blank"
                             rel="noopener noreferrer"
                             aria-label="Открыть заказ"
-                            className="p-1.5 rounded-md border border-amber-500/20 text-amber-400/80 hover:text-amber-300 hover:border-amber-500/40 transition"
+                            className={cn(
+                              iconBtn,
+                              "border-amber-500/30 text-amber-400 hover:text-amber-300 hover:border-amber-500/50"
+                            )}
                           >
-                            <ExternalLink className="w-4 h-4 shrink-0" />
+                            <ExternalLink className="w-4 h-4" />
                           </a>
                         </div>
                       </div>
-                      <div className="text-xs text-gray-500 mt-2 flex justify-between items-center gap-2">
-                        <span className="px-1.5 py-0.5 rounded bg-white/10 text-gray-400">
+                      <div className="text-xs text-gray-500 mt-3 flex flex-wrap justify-between items-center gap-2">
+                        <span className="px-2 py-0.5 rounded-md bg-white/10 text-gray-400">
                           {o.platform}
                         </span>
-                        {o.budget && (
-                          <span>
+                        {o.budget != null && (
+                          <span className="font-medium text-gray-400">
                             {o.budget} {o.currency}
                           </span>
                         )}
@@ -717,7 +684,7 @@ export default function MiniAppPage() {
                 {parseLoading && (
                   <div className="mt-2 flex items-center gap-2 text-[11px] text-gray-400">
                     <span className="inline-flex h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
-                    <span>Парсим FL.ru, Freelance.ru, Kwork, Guru…</span>
+                    <span>Парсим биржи и фильтруем по стеку…</span>
                   </div>
                 )}
               </div>
@@ -728,46 +695,31 @@ export default function MiniAppPage() {
                 </div>
               )}
 
-              {!parseLoading && !parseError && (parseTotal !== null || (parseLangStats && Object.keys(parseLangStats).length > 0)) && (
-                <div className="space-y-3">
-                  {parseTotal !== null && (
-                    <div>
-                      <div className="text-xs text-gray-400 mb-1">Найдено всего:</div>
-                      <div className="text-xl font-semibold text-amber-300">
-                        {parseTotal} объявлений
-                      </div>
+              {!parseLoading && !parseError && parseNewSaved !== null && (
+                <div className="space-y-3 rounded-xl border border-white/10 bg-white/5 p-3">
+                  <div>
+                    <div className="text-xs text-gray-400 mb-1">Новых в базу (за этот запуск)</div>
+                    <div className="text-2xl font-bold text-amber-300 tabular-nums">
+                      {parseNewSaved}
                     </div>
-                  )}
-
-                  {parseLangStats && Object.keys(parseLangStats).length > 0 && (
-                    <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-xs text-gray-400">
-                          По языкам программирования
-                        </span>
-                        <span className="text-[11px] text-gray-500">
-                          Нажми на язык, чтобы перейти к заказам
-                        </span>
+                    {parseNewSaved === 0 && (
+                      <p className="text-xs text-gray-500 mt-2 leading-relaxed">
+                        Все проверенные объявления уже были в «Заказах» или не прошли фильтр по стеку. Это нормально.
+                      </p>
+                    )}
+                  </div>
+                  {parseScanned !== null && (
+                    <div className="text-xs text-gray-500 space-y-1 border-t border-white/10 pt-3">
+                      <div className="flex justify-between gap-2">
+                        <span>Просмотрено на биржах</span>
+                        <span className="text-gray-400 tabular-nums">{parseScanned}</span>
                       </div>
-                      <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto pt-0.5">
-                        {Object.entries(parseLangStats)
-                          .sort((a, b) => b[1] - a[1])
-                          .map(([lang, count]) => (
-                            <button
-                              key={lang}
-                              type="button"
-                              onClick={() => {
-                                setShowParseModal(false);
-                              }}
-                              className="px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-100 text-xs flex items-center gap-1.5 border border-amber-500/30 hover:bg-amber-500/25 transition"
-                            >
-                              <span>{lang}</span>
-                              <span className="text-[11px] bg-black/30 rounded-full px-1.5 py-0.5">
-                                {count}
-                              </span>
-                            </button>
-                          ))}
-                      </div>
+                      {parseFilteredOut !== null && (
+                        <div className="flex justify-between gap-2">
+                          <span>Отсеяно фильтром стека</span>
+                          <span className="text-gray-400 tabular-nums">{parseFilteredOut}</span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -779,7 +731,7 @@ export default function MiniAppPage() {
                   onClick={() => setShowParseModal(false)}
                   className="w-full mt-1 py-2.5 rounded-xl bg-amber-500 text-black text-sm font-semibold hover:bg-amber-400 transition"
                 >
-                  Смотреть отфильтрованные заказы
+                  К списку заказов
                 </button>
               )}
             </div>
