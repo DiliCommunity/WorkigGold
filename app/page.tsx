@@ -3,6 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { SUPPORTED_PLATFORMS } from "@/lib/constants/platforms";
 import { OrderCard } from "@/components/OrderCard";
+import { ResponseButton } from "@/components/ResponseButton";
 
 export const dynamic = "force-dynamic";
 
@@ -126,7 +127,7 @@ export default async function DashboardPage() {
           {uiOrders.length > 0 ? (
             <div className="space-y-4">
               {uiOrders.map((order) => (
-                <OrderCard key={order.id} order={order} />
+                <OrderCard key={order.id} order={order} actions={<ResponseButton order={order} />} />
               ))}
             </div>
           ) : (

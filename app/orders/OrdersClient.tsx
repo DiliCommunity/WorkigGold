@@ -5,6 +5,7 @@ import { AlertTriangle, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { UiOrder } from "@/components/OrderCard";
 import { OrderCard, iconBtn } from "@/components/OrderCard";
+import { ResponseButton } from "@/components/ResponseButton";
 import { SUPPORTED_PLATFORMS } from "@/lib/constants/platforms";
 import { getFilterConfig } from "@/lib/filters/skills";
 import type { KeywordFilterConfig } from "@/lib/filters/keyword-filter";
@@ -398,6 +399,7 @@ export function OrdersClient({ initialOrders }: { initialOrders: UiOrder[] }) {
                 order={o}
                 actions={
                   <>
+                    <ResponseButton order={o} />
                     <button
                       type="button"
                       onClick={() => toggle(o.id, "favorites")}

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Script from "next/script";
 import { X, ExternalLink, ChevronRight, Activity, ArrowLeft, Star, AlertTriangle } from "lucide-react";
+import { ResponseButton } from "@/components/ResponseButton";
 import { iconBtn } from "@/components/OrderCard";
 import { cn } from "@/lib/utils";
 import { MINI_APP_AGENTS, GATHER_AGENT_IDS, type MiniAppAgent } from "@/lib/agents/mini-app-agents";
@@ -579,6 +580,7 @@ export default function MiniAppPage() {
                           {o.title}
                         </a>
                         <div className="flex shrink-0 flex-row items-center justify-end gap-1.5 self-end sm:self-start">
+                          <ResponseButton order={o} size="sm" className="border-amber-500/30 text-amber-400 hover:border-amber-500/50 hover:bg-amber-500/10" />
                           <button
                             type="button"
                             aria-label="В избранное"
