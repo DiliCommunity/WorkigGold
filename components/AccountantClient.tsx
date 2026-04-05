@@ -11,11 +11,22 @@ import {
   Trash2,
   ExternalLink,
   Info,
+  RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EXCHANGE_SERVICES, PLANNED_EXCHANGES, type ExchangeService } from "@/lib/accountant/catalog";
 
 const STORAGE_KEY = "wg_accountant_expenses";
+const STORAGE_SELECTED = "wg_accountant_selected_services";
+const STORAGE_OVERRIDES = "wg_accountant_price_overrides";
+
+type PriceOverride = {
+  priceRub?: number | null;
+  period?: string;
+  note?: string;
+  parsedAt?: string;
+  sourceUrl?: string;
+};
 
 type ExpenseRow = {
   id: string;
@@ -40,6 +51,52 @@ function saveExpenses(rows: ExpenseRow[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
 }
 
+function loadSelectedIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(STORAGE_SELECTED);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw) as string[];
+    return new Set(Array.isArray(arr) ? arr : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveSelectedIds(ids: Set<string>) {
+  localStorage.setItem(STORAGE_SELECTED, JSON.stringify(Array.from(ids)));
+}
+
+function loadOverrides(): Record<string, PriceOverride> {
+  try {
+    const raw = localStorage.getItem(STORAGE_OVERRIDES);
+    if (!raw) return {};
+    const p = JSON.parse(raw) as Record<string, PriceOverride>;
+    return p && typeof p === "object" ? p : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveOverrides(o: Record<string, PriceOverride>) {
+  localStorage.setItem(STORAGE_OVERRIDES, JSON.stringify(o));
+}
+
+function effectivePriceRub(s: ExchangeService, overrides: Record<string, PriceOverride>): number {
+  const o = overrides[s.id];
+  const raw = o?.priceRub !== undefined ? o.priceRub : s.priceRub;
+  return raw != null && raw > 0 ? raw : 0;
+}
+
+function displayPriceRow(s: ExchangeService, overrides: Record<string, PriceOverride>) {
+  const o = overrides[s.id];
+  const raw = o?.priceRub !== undefined ? o.priceRub : s.priceRub;
+  const period = o?.period ?? s.period;
+  if (raw != null && raw > 0) {
+    return `${raw.toLocaleString("ru-RU")}${period ? ` / ${period}` : ""}`;
+  }
+  return "—";
+}
+
 const kindLabel: Record<string, string> = {
   subscription: "Подписка",
   response: "Отклик",
@@ -54,11 +111,93 @@ export function AccountantClient({ budgetRub }: { budgetRub: number }) {
   const [advice, setAdvice] = useState<string | null>(null);
   const [adviceLoading, setAdviceLoading] = useState(false);
   const [draft, setDraft] = useState({ serviceId: EXCHANGE_SERVICES[0]?.id ?? "", amount: "", note: "" });
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [overrides, setOverrides] = useState<Record<string, PriceOverride>>({});
+  const [parseLoading, setParseLoading] = useState(false);
+  const [parseMessage, setParseMessage] = useState<string | null>(null);
 
   useEffect(() => {
     setExpenses(loadExpenses());
+    setSelectedIds(loadSelectedIds());
+    setOverrides(loadOverrides());
     setMounted(true);
   }, []);
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      saveSelectedIds(next);
+      return next;
+    });
+  };
+
+  const selectAllTable = () => {
+    const next = new Set(EXCHANGE_SERVICES.map((s) => s.id));
+    setSelectedIds(next);
+    saveSelectedIds(next);
+  };
+
+  const selectNoneTable = () => {
+    const next = new Set<string>();
+    setSelectedIds(next);
+    saveSelectedIds(next);
+  };
+
+  const selectionTotal = useMemo(() => {
+    let sum = 0;
+    let noFixed = 0;
+    for (const s of EXCHANGE_SERVICES) {
+      if (!selectedIds.has(s.id)) continue;
+      const v = effectivePriceRub(s, overrides);
+      if (v > 0) sum += v;
+      else noFixed += 1;
+    }
+    return { sum, noFixed, count: selectedIds.size };
+  }, [selectedIds, overrides]);
+
+  const runParsePrices = async () => {
+    setParseLoading(true);
+    setParseMessage(null);
+    try {
+      const res = await fetch("/api/accountant/parse-prices", { method: "POST" });
+      const data = await res.json();
+      if (!data.ok) {
+        setParseMessage(data.error || "Ошибка парсинга");
+        return;
+      }
+      const next = { ...overrides };
+      for (const u of data.updates as {
+        id: string;
+        priceRub: number | null;
+        period?: string;
+        note: string;
+        sourceUrl: string;
+      }[]) {
+        const prev = next[u.id] ?? {};
+        const hasPrice = typeof u.priceRub === "number" && u.priceRub > 0;
+        next[u.id] = {
+          ...prev,
+          ...(hasPrice ? { priceRub: u.priceRub, ...(u.period ? { period: u.period } : {}) } : {}),
+          note: u.note,
+          parsedAt: data.parsedAt,
+          sourceUrl: u.sourceUrl,
+        };
+      }
+      setOverrides(next);
+      saveOverrides(next);
+      const errPart =
+        Array.isArray(data.errors) && data.errors.length
+          ? ` Предупреждения: ${data.errors.join("; ")}`
+          : "";
+      setParseMessage(`Цены обновлены по данным парсинга (${new Date(data.parsedAt).toLocaleString("ru-RU")}).${errPart}`);
+    } catch {
+      setParseMessage("Сеть или сервер недоступны");
+    } finally {
+      setParseLoading(false);
+    }
+  };
 
   const spent = useMemo(() => expenses.reduce((s, e) => s + e.amount, 0), [expenses]);
   const remaining = Math.max(0, budgetRub - spent);
@@ -252,14 +391,52 @@ export function AccountantClient({ budgetRub }: { budgetRub: number }) {
       </section>
 
       <section className="rounded-2xl border border-white/5 bg-card overflow-hidden">
-        <div className="p-6 border-b border-white/5 flex items-center gap-2">
-          <Info className="w-5 h-5 text-secondary shrink-0" />
-          <h2 className="text-lg font-semibold">Справочник цен (актуализируйте сами)</h2>
+        <div className="p-6 border-b border-white/5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-2">
+            <Info className="w-5 h-5 text-secondary shrink-0 mt-0.5" />
+            <div>
+              <h2 className="text-lg font-semibold">Справочник цен</h2>
+              <p className="text-sm text-foreground/50 mt-1">
+                Отметьте услуги — внизу таблицы сумма по фиксированным ценам. Парсинг — эвристика по публичным страницам.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            disabled={parseLoading}
+            onClick={runParsePrices}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-secondary/40 bg-secondary/15 text-secondary px-4 py-2.5 text-sm font-medium hover:bg-secondary/25 transition disabled:opacity-50 shrink-0"
+          >
+            <RefreshCw className={cn("w-4 h-4", parseLoading && "animate-spin")} />
+            {parseLoading ? "Парсинг…" : "Обновить цены (парсинг)"}
+          </button>
+        </div>
+        {parseMessage && (
+          <div className="px-6 py-3 text-sm border-b border-white/5 bg-amber-500/5 text-foreground/80">
+            {parseMessage}
+          </div>
+        )}
+        <div className="px-6 py-2 flex flex-wrap gap-2 border-b border-white/5">
+          <button
+            type="button"
+            onClick={selectAllTable}
+            className="text-xs px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:border-primary/30"
+          >
+            Выбрать все
+          </button>
+          <button
+            type="button"
+            onClick={selectNoneTable}
+            className="text-xs px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:border-primary/30"
+          >
+            Снять все
+          </button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-foreground/50 border-b border-white/5">
+                <th className="p-3 w-10 font-medium text-center">✓</th>
                 <th className="p-4 font-medium">Биржа</th>
                 <th className="p-4 font-medium">Услуга</th>
                 <th className="p-4 font-medium">Тип</th>
@@ -269,30 +446,74 @@ export function AccountantClient({ budgetRub }: { budgetRub: number }) {
               </tr>
             </thead>
             <tbody>
-              {EXCHANGE_SERVICES.map((s) => (
-                <tr key={s.id} className="border-b border-white/5 hover:bg-white/[0.02]">
-                  <td className="p-4 font-medium text-primary">{s.platform}</td>
-                  <td className="p-4">{s.name}</td>
-                  <td className="p-4 text-foreground/70">{kindLabel[s.kind] ?? s.kind}</td>
-                  <td className="p-4 tabular-nums">
-                    {s.priceRub > 0 ? `${s.priceRub.toLocaleString("ru-RU")}${s.period ? ` / ${s.period}` : ""}` : "—"}
-                  </td>
-                  <td className="p-4 text-foreground/60 max-w-md">{s.note}</td>
-                  <td className="p-4">
-                    {s.docUrl && (
-                      <a
-                        href={s.docUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-secondary hover:text-primary inline-flex"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </a>
+              {EXCHANGE_SERVICES.map((s) => {
+                const o = overrides[s.id];
+                const note = o?.parsedAt && o.note?.trim() ? o.note : s.note;
+                return (
+                  <tr
+                    key={s.id}
+                    className={cn(
+                      "border-b border-white/5 hover:bg-white/[0.02]",
+                      selectedIds.has(s.id) && "bg-primary/5"
                     )}
-                  </td>
-                </tr>
-              ))}
+                  >
+                    <td className="p-3 text-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(s.id)}
+                        onChange={() => toggleSelected(s.id)}
+                        className="w-4 h-4 rounded border-white/20 bg-black/30 text-primary focus:ring-primary/50"
+                        aria-label={`Выбрать ${s.platform} ${s.name}`}
+                      />
+                    </td>
+                    <td className="p-4 font-medium text-primary">{s.platform}</td>
+                    <td className="p-4">{s.name}</td>
+                    <td className="p-4 text-foreground/70">{kindLabel[s.kind] ?? s.kind}</td>
+                    <td className="p-4 tabular-nums font-medium text-foreground">
+                      {displayPriceRow(s, overrides)}
+                      {o?.parsedAt && (
+                        <span className="block text-[10px] text-foreground/40 font-normal mt-0.5">
+                          парсинг
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-4 text-foreground/60 max-w-md text-xs sm:text-sm">{note}</td>
+                    <td className="p-4">
+                      {(o?.sourceUrl || s.docUrl) && (
+                        <a
+                          href={o?.sourceUrl || s.docUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-secondary hover:text-primary inline-flex"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </a>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
+            <tfoot>
+              <tr className="bg-gradient-to-r from-primary/15 to-secondary/10 border-t-2 border-primary/30">
+                <td colSpan={4} className="p-4 font-semibold text-foreground">
+                  Итого по выбранным ({selectionTotal.count} поз.)
+                </td>
+                <td colSpan={3} className="p-4">
+                  <p className="text-2xl font-bold text-primary tabular-nums">
+                    {selectionTotal.sum.toLocaleString("ru-RU")} ₽
+                  </p>
+                  {selectionTotal.noFixed > 0 && (
+                    <p className="text-xs text-foreground/50 mt-1">
+                      + {selectionTotal.noFixed} поз. без фиксированной цены в ₽ (комиссия %, бесплатный лимит и т.д.)
+                    </p>
+                  )}
+                  {selectionTotal.count === 0 && (
+                    <p className="text-xs text-foreground/50 mt-1">Ничего не выбрано</p>
+                  )}
+                </td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       </section>
