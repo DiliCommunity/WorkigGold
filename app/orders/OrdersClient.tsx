@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Star } from "lucide-react";
+import Link from "next/link";
+import { AlertTriangle, Star, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { UiOrder } from "@/components/OrderCard";
 import { OrderCard, iconBtn } from "@/components/OrderCard";
@@ -399,6 +400,17 @@ export function OrdersClient({ initialOrders }: { initialOrders: UiOrder[] }) {
                 order={o}
                 actions={
                   <>
+                    <Link
+                      href={`/chat/${o.id}`}
+                      className={cn(
+                        iconBtn,
+                        "bg-white/5 text-foreground/70 border-white/10 hover:border-secondary/40 hover:text-secondary"
+                      )}
+                      title="CRM-чат по заказу"
+                      aria-label="Чат"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                    </Link>
                     <ResponseButton order={o} />
                     <button
                       type="button"

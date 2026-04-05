@@ -10,11 +10,13 @@ import {
   ListTodo,
   Calendar,
   GitBranch,
+  Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const nav = [
   { href: "/", label: "Дашборд", icon: LayoutDashboard },
+  { href: "/accountant", label: "Бухгалтер", icon: Wallet },
   { href: "/mini-app", label: "Mini App (Telegram)", icon: Briefcase },
   { href: "/orders", label: "Заказы", icon: Briefcase },
   { href: "/chat", label: "Чаты", icon: MessageSquare },
@@ -65,7 +67,8 @@ export function SidebarNav({
             pathname === href ||
               (href === "/chat" && pathname.startsWith("/chat")) ||
               (href === "/calendar" && pathname.startsWith("/calendar")) ||
-              (href === "/agents" && pathname.startsWith("/agents"))
+              (href === "/agents" && pathname.startsWith("/agents")) ||
+              (href === "/accountant" && pathname.startsWith("/accountant"))
               ? "bg-primary/20 text-primary border border-primary/30"
               : "text-foreground/70 hover:bg-card-hover hover:text-foreground"
           )}
