@@ -8,7 +8,7 @@ import { ResponseButton } from "@/components/ResponseButton";
 import { iconBtn } from "@/components/OrderCard";
 import { cn } from "@/lib/utils";
 import { MINI_APP_AGENTS, GATHER_AGENT_IDS, type MiniAppAgent } from "@/lib/agents/mini-app-agents";
-import { SUPPORTED_PLATFORMS } from "@/lib/constants/platforms";
+import { isSupportedPlatform } from "@/lib/constants/platforms";
 import { STACK_DISPLAY, getFilterConfig, DEFAULT_MIN_INCLUDE_MATCHES } from "@/lib/filters/skills";
 import type { KeywordFilterConfig } from "@/lib/filters/keyword-filter";
 import { scoreTextAgainstKeywords } from "@/lib/filters/keyword-filter";
@@ -136,9 +136,8 @@ export default function MiniAppPage() {
 
   const byPlatformCounts = useMemo(() => {
     const m: Record<string, number> = {};
-    const supported = new Set(SUPPORTED_PLATFORMS);
     for (const o of orders) {
-      if (supported.has(o.platform)) m[o.platform] = (m[o.platform] || 0) + 1;
+      if (isSupportedPlatform(o.platform)) m[o.platform] = (m[o.platform] || 0) + 1;
     }
     return m;
   }, [orders]);
