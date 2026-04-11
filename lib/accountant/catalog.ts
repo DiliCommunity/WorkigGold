@@ -24,7 +24,7 @@ export const EXCHANGE_SERVICES: ExchangeService[] = [
     kind: "response",
     priceRub: 0,
     note: "Часто бесплатно лимитированно; платные опции и комиссия с заказа — см. тарифы Kwork.",
-    docUrl: "https://kwork.ru/pages/terms",
+    docUrl: "https://kwork.ru/terms",
   },
   {
     id: "kwork-commission",

@@ -123,6 +123,37 @@ model ProjectDeadline {
   @@index([completed])
 }
 
+model AccountantExpense {
+  id        String   @id @default(cuid())
+  serviceId String
+  amountRub Float
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@index([serviceId])
+  @@index([createdAt])
+}
+
+model AccountantSelection {
+  id        String  @id @default(cuid())
+  serviceId String  @unique
+  selected  Boolean @default(false)
+  updatedAt DateTime @updatedAt
+
+  @@index([selected])
+}
+
+model AccountantPriceOverride {
+  id        String   @id @default(cuid())
+  serviceId String   @unique
+  priceRub  Float?
+  period    String?
+  note      String?
+  sourceUrl String?
+  parsedAt  DateTime?
+  updatedAt DateTime @updatedAt
+}
+
 enum OrderStatus {
   NEW
   FILTERED

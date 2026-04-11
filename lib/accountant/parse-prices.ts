@@ -173,7 +173,7 @@ export async function parseExchangePriceHints(): Promise<{
   }
 
   // --- Kwork (текст комиссии / условий) ---
-  const kwHtml = await fetchText("https://kwork.ru/pages/terms");
+  const kwHtml = await fetchText("https://kwork.ru/terms");
   if (kwHtml) {
     const body = stripScripts(kwHtml).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
     const pct = body.match(/(\d{1,2}[.,]\d|\d{1,2})\s*%/g);
@@ -185,7 +185,7 @@ export async function parseExchangePriceHints(): Promise<{
       id: "kwork-commission",
       priceRub: null,
       note,
-      sourceUrl: "https://kwork.ru/pages/terms",
+      sourceUrl: "https://kwork.ru/terms",
     });
     updates.push({
       id: "kwork-response",
