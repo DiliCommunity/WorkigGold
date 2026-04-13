@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Script from "next/script";
-import { X, ExternalLink, ChevronRight, Activity, ArrowLeft, Star, AlertTriangle } from "lucide-react";
+import { X, ExternalLink, ChevronRight, Activity, ArrowLeft, Star, AlertTriangle, Trash2 } from "lucide-react";
 import { ResponseButton } from "@/components/ResponseButton";
 import { iconBtn } from "@/components/OrderCard";
 import { cn } from "@/lib/utils";
@@ -170,6 +170,21 @@ export default function MiniAppPage() {
       setAgentLogs([]);
     } finally {
       setLogsLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Удалить вакансию из базы?")) return;
+    try {
+      const res = await fetch(`/api/orders/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setOrders((prev) => prev.filter((o) => o.id !== id));
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(typeof data.error === "string" ? data.error : "Ошибка при удалении");
+      }
+    } catch {
+      alert("Ошибка сети");
     }
   };
 
@@ -634,6 +649,18 @@ export default function MiniAppPage() {
                           >
                             <ExternalLink className="w-4 h-4" />
                           </a>
+                          <button
+                            type="button"
+                            aria-label="Удалить"
+                            title="Удалить"
+                            className={cn(
+                              iconBtn,
+                              "bg-white/5 border-white/10 text-gray-400 hover:text-red-400 hover:border-red-500/30"
+                            )}
+                            onClick={() => handleDelete(o.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
                       </div>
                       <div className="text-xs text-gray-500 mt-3 flex flex-wrap justify-between items-center gap-2">

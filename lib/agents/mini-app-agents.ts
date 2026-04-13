@@ -28,8 +28,37 @@ export const MINI_APP_AGENTS: MiniAppAgent[] = [
     platformFilter: "Kwork",
     description: "Сканирует Kwork (нужны KWORK_LOGIN / KWORK_PASSWORD)",
   },
+  {
+    id: "tg-sborschik",
+    name: "ТГ-Сборщик",
+    platform: "Telegram",
+    platformFilter: "Telegram",
+    description: "Сканирует каналы (TELEGRAM_CHANNELS)",
+  },
+  {
+    id: "vk-sborschik",
+    name: "ВК-Сборщик",
+    platform: "VK",
+    platformFilter: "VK",
+    description: "Сканирует группы (VK_SERVICE_TOKEN, VK_GROUPS)",
+  },
+  {
+    id: "reddit-sborschik",
+    name: "Reddit-Сборщик",
+    platform: "Reddit",
+    platformFilter: "Reddit",
+    description: "Сканирует сабреддиты (REDDIT_SUBS)",
+  },
   { id: "dispatcher", name: "Диспетчер", platform: "Все", platformFilter: null, description: "Все платформы" },
   { id: "vestnik", name: "Вестник", platform: "Уведомления", platformFilter: null, description: "Уведомления в бот" },
 ];
 
-export const GATHER_AGENT_IDS = ["fl-razvedchik", "freelance-ru-skaner", "guru-skaner", "kwork-sborschik"];
+export const GATHER_AGENT_IDS = [
+  "fl-razvedchik",
+  "freelance-ru-skaner",
+  "guru-skaner",
+  "kwork-sborschik",
+  "tg-sborschik",
+  "vk-sborschik",
+  "reddit-sborschik",
+];
