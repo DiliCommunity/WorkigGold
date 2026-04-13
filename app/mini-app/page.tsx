@@ -24,6 +24,8 @@ interface Order {
   url: string | null;
   createdAt: string;
   postedAt?: string | null;
+  clientName?: string | null;
+  filterScore?: number | null;
 }
 
 interface AgentLog {
@@ -81,10 +83,12 @@ export default function MiniAppPage() {
     ? orders.filter((o) => o.platform === platformFilter)
     : orders;
   const baseByPlatform = activePlatform ? byPlatform.filter((o) => o.platform === activePlatform) : byPlatform;
-  const filteredOrders = baseByPlatform.filter((o) => {
-    const res = scoreTextAgainstKeywords(`${o.title} ${o.description || ""}`, filterConfig);
-    return res.matches;
-  });
+  const filteredOrders = platformFilter
+    ? baseByPlatform
+    : baseByPlatform.filter((o) => {
+        const res = scoreTextAgainstKeywords(`${o.title} ${o.description || ""}`, filterConfig);
+        return res.matches;
+      });
   // Как на странице «Заказы»: избранное/срочно — все отмеченные по бирже, без keyword-фильтра
   const folderOrders =
     activeFolder === "all"
@@ -94,7 +98,7 @@ export default function MiniAppPage() {
   const searchedOrders = useMemo(() => {
     const q = search.trim().toLowerCase();
     const base = activeCustomer
-      ? folderOrders.filter((o) => ((o as any).clientName || "").toLowerCase() === activeCustomer)
+      ? folderOrders.filter((o) => (o.clientName || "").toLowerCase() === activeCustomer)
       : folderOrders;
     if (!q) return base;
     return base.filter((o) => {
@@ -121,7 +125,7 @@ export default function MiniAppPage() {
 
   const customers = useMemo(() => {
     const map = new Map<string, { name: string; count: number; lastAt: number; platforms: Set<string> }>();
-    for (const o of orders as any[]) {
+    for (const o of orders) {
       const name = (o.clientName || "").trim();
       if (!name) continue;
       const key = name.toLowerCase();
@@ -402,7 +406,7 @@ export default function MiniAppPage() {
           {!selectedAgent && (
             <section className="mb-6">
               <div className="p-3 rounded-xl bg-white/5 border border-white/10">
-                <div className="text-xs text-gray-500 mb-1">Строгий фильтр по стеку (мин. 2 совпадения):</div>
+                <div className="text-xs text-gray-500 mb-1">Фильтр по стеку (показываем релевантные объявления):</div>
                 <div className="flex flex-wrap gap-1.5">
                   {STACK_DISPLAY.map((s) => (
                     <span
@@ -742,13 +746,13 @@ export default function MiniAppPage() {
               {!parseLoading && !parseError && parseNewSaved !== null && (
                 <div className="space-y-3 rounded-xl border border-white/10 bg-white/5 p-3">
                   <div>
-                    <div className="text-xs text-gray-400 mb-1">Новых в базу (за этот запуск)</div>
+                    <div className="text-xs text-gray-400 mb-1">Новых сохранено в базу</div>
                     <div className="text-2xl font-bold text-amber-300 tabular-nums">
                       {parseNewSaved}
                     </div>
                     {parseNewSaved === 0 && (
                       <p className="text-xs text-gray-500 mt-2 leading-relaxed">
-                        Все проверенные объявления уже были в «Заказах» или не прошли фильтр по стеку. Это нормально.
+                        Все проверенные объявления уже были сохранены раньше. Это нормально.
                       </p>
                     )}
                   </div>

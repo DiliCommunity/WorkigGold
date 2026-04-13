@@ -26,9 +26,9 @@ export interface RunAllResult {
   total: number;
   byPlatform: Record<string, number>;
   errors: string[];
-  /** Сколько новых заказов реально записали в БД (остальные уже были) */
+  /** Сколько новых заказов реально записали в БД (все новые объявления, не только по стеку) */
   savedNew: number;
-  /** Сколько объявлений отсеяли по ключевым словам (не под стек) */
+  /** Сколько объявлений не подошли под стек */
   filteredOut: number;
 }
 
@@ -140,13 +140,15 @@ export async function runAllParsers(options: RunAllParsersOptions = {}): Promise
       `${order.title} ${order.description ?? ""}`,
       cfg
     );
-    if (!matches) {
-      filtered++;
-      continue;
-    }
+
+    if (!matches) filtered++;
+
     try {
       const normalized = Math.max(0, Math.min(1, score / 30));
-      const ok = await saveOrder(order, { status: "FILTERED", filterScore: normalized });
+      const ok = await saveOrder(order, {
+        status: matches ? "FILTERED" : "NEW",
+        filterScore: normalized,
+      });
       if (ok) saved++;
     } catch (e) {
       errors.push(`Save: ${order.title.slice(0, 50)} - ${e}`);
